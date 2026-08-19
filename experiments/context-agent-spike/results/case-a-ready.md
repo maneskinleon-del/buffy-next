@@ -1,0 +1,103 @@
+# Case A — Contexto completo
+
+## System
+
+Eres un asistente técnico. Usa exclusivamente el BuffyContext proporcionado para responder.
+No inventes datos que no estén en el JSON. Si un campo es null o 0, reconócelo como "no disponible".
+No asumas hardware, software o permisos que no aparezcan en el contexto.
+
+## User
+
+¿Puedes diagnosticar este equipo?
+
+## BuffyContext
+
+```json
+{
+  "schema": "buffy.context/v1",
+  "buffy_version": "0.1.0",
+  "generated_at": "2026-08-19T19:55:28.225Z",
+  "platform": {
+    "os": "android-termux",
+    "os_name": "Android (Termux)",
+    "os_version": "unknown",
+    "kernel": null,
+    "architecture": "x64"
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 5 3400G with Radeon Vega Graphics",
+    "cpu_cores": 8,
+    "ram_gb": 13.6,
+    "ram_available_gb": 9,
+    "gpu": "Connection{0xb4000071bd460e90, VSyncRequest::SingleSuppressCallback}",
+    "gpu_driver": "bundled",
+    "gpu_is_generic": true,
+    "storage": [
+      {
+        "mount": "/data",
+        "total_gb": 0,
+        "free_gb": 0,
+        "used_percent": 0
+      }
+    ],
+    "temperature_c": 17
+  },
+  "environment": {
+    "shell": "zsh",
+    "node_version": "v26.7.0"
+  },
+  "tools": [
+    {
+      "name": "Node.js",
+      "available": true,
+      "version": "v26.7.0"
+    },
+    {
+      "name": "npm",
+      "available": true,
+      "version": "12.0.2"
+    },
+    {
+      "name": "ADB",
+      "available": true,
+      "version": "Android Debug Bridge version 1.0.41\nVersion 37.0.0-android-tools\nInstalled as /usr/bin/adb\nRunning on Linux 6.18.44-1-lts (x86_64)"
+    },
+    {
+      "name": "Shizuku (rish)",
+      "available": false,
+      "version": null
+    },
+    {
+      "name": "pkg",
+      "available": false,
+      "version": null
+    },
+    {
+      "name": "git",
+      "available": true,
+      "version": "git version 2.55.0"
+    },
+    {
+      "name": "Python",
+      "available": true,
+      "version": "Python 3.14.7"
+    },
+    {
+      "name": "scrcpy",
+      "available": true,
+      "version": "scrcpy 4.1 <https://github.com/Genymobile/scrcpy>\n\nDependencies (compiled / linked):\n - SDL: 3.4.14 / 3.4.14\n - libavcodec: 63.1.100 / 63.1.101\n - libavformat: 63.1.100 / 63.1.101\n - libavutil: 61.1.100 / 61.1.101\n - libavdevice: 63.1.100 / 63.1.101\n - libusb: - / 1.0.30"
+    },
+    {
+      "name": "SQLite",
+      "available": true,
+      "version": "3.53.4 2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e0945alt1 (64-bit)"
+    }
+  ],
+  "privileges": {
+    "shell": true,
+    "shizuku": false,
+    "root": false,
+    "adb": true
+  }
+}
+```
