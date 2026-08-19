@@ -7,29 +7,41 @@ import { AndroidTermuxAdapter } from './android.js';
 // Legacy alias for old code that imports AndroidTermuxAdapter from this path
 export { AndroidTermuxAdapter } from './android.js';
 
-function detectPlatform(): 'windows' | 'android-termux' | 'unknown' {
-  const platform = process.platform;
+/**
+ * Detect platform from env vars and process.platform.
+ * Accepts optional `env` and `platform` overrides for deterministic testing.
+ */
+export function detectPlatform(
+  env?: Record<string, string | undefined>,
+  platform?: string,
+): 'windows' | 'android-termux' | 'linux' | 'unknown' {
+  const os = platform ?? process.platform;
+  const e = env ?? process.env;
 
   // Windows
-  if (platform === 'win32') return 'windows';
+  if (os === 'win32') return 'windows';
 
-  // Android/Termux detection
-  if (platform === 'linux') {
-    // Any of these indicators is sufficient for Termux detection
-    const isTermux = !!process.env.TERMUX_VERSION
-      || !!process.env.TERMUX_APP_PACKAGE_MANAGER
-      || process.env.PREFIX?.includes('com.termux')
-      || process.env.HOME?.includes('com.termux')
-      || process.env.PREFIX?.includes('/data/data/com.termux');
+  // Linux (covers both desktop Linux and Android/Termux)
+  if (os === 'linux') {
+    // Termux detection — these are definitive Termux indicators
+    const isTermux = !!e.TERMUX_VERSION
+      || !!e.TERMUX_APP_PACKAGE_MANAGER
+      || e.PREFIX?.includes('com.termux')
+      || e.HOME?.includes('com.termux')
+      || e.PREFIX?.includes('/data/data/com.termux');
 
-    // Android indicators — one is enough
-    const isAndroid = !!process.env.SERIAL
-      || !!process.env.ANDROID_ROOT
-      || !!process.env.ANDROID_DATA
-      || !!process.env.ANDROID_HOME;
+    if (isTermux) return 'android-termux';
 
-    // If either Termux or Android indicators match, it's android-termux
-    if (isTermux || isAndroid) return 'android-termux';
+    // Android detection — requires BOTH ANDROID_ROOT=/system AND ANDROID_DATA=/data
+    // Single indicators (ANDROID_HOME, SERIAL, standalone ANDROID_ROOT) are NOT sufficient
+    // because they appear in desktop Linux environments with ADB installed.
+    const isAndroid = e.ANDROID_ROOT === '/system'
+      && e.ANDROID_DATA === '/data';
+
+    if (isAndroid) return 'android-termux';
+
+    // Pure Linux desktop — supported in Phase 2, not yet implemented
+    return 'linux';
   }
 
   return 'unknown';
@@ -49,19 +61,17 @@ export async function createAdapter(): Promise<PlatformAdapter> {
     case 'android-termux':
       return new AndroidTermuxAdapter();
 
+    case 'linux':
+      throw new Error(
+        'LinuxAdapter no está implementado todavía (Fase 2). '
+        + 'Buffy Next actualmente soporta Windows y Android/Termux.',
+      );
+
     case 'unknown':
-    default: {
-      // Fallback: try to detect Android even without Termux env vars
-      const { execSync } = await import('node:child_process');
-      try {
-        execSync('adb devices', { encoding: 'utf-8', timeout: 5000 });
-        return new AndroidTermuxAdapter();
-      } catch {
-        throw new Error(
-          `Plataforma no soportada: ${process.platform}. ` +
-          `Buffy Next soporta Windows (PowerShell) y Android/Termux (bash).`,
-        );
-      }
-    }
+    default:
+      throw new Error(
+        `Plataforma no soportada: ${process.platform}. `
+        + `Buffy Next soporta Windows (PowerShell) y Android/Termux (bash).`,
+      );
   }
 }

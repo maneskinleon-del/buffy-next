@@ -125,8 +125,10 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     const availableGB = Math.round((availKB / 1048576) * 10) / 10;
 
     // GPU — try multiple sources: ADB dumpsys, getprop, or local GL renderer
-    const gpuName = adbShell('dumpsys SurfaceFlinger 2>/dev/null | grep -i "GLES" | head -1')
-      .replace(/^GLES:\s*/, '')
+    // Pattern anchored to lines starting with 'GLES:' to avoid matching
+    // unrelated strings like SingleSuppressCallback that contain 'GLES' as substring
+    const gpuRaw = adbShell('dumpsys SurfaceFlinger 2>/dev/null | grep -i "^ *GLES:" | head -1');
+    const gpuName = gpuRaw.replace(/^\s*GLES:\s*/, '')
       || sh('getprop ro.hardware.egl')
       || sh('getprop ro.board.platform')
       || 'Unknown GPU';
