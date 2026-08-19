@@ -7,14 +7,12 @@ import { createAdapter } from './adapters/index.js';
 import { runDoctor } from './core/doctor.js';
 import { diagnose } from './core/diagnose.js';
 import { findActionById } from './actions/registry.js';
-import { buildExecutionPlan, executeAction } from './core/executor.js';
-import { requiresAuth, isForbidden } from './core/security.js';
+import { executeWithGates } from './core/pipeline.js';
 import { setInstallTarget } from './actions/catalog/install-tool.js';
 import {
   renderGreeting,
   renderDoctorReport,
   renderDiagnosticReport,
-  renderProposal,
   renderActionResult,
   renderCapabilities,
   toJSON,
@@ -119,7 +117,7 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
   console.log(renderDiagnosticReport(result.items));
 
   for (const action of result.suggestedActions) {
-    await executeWithGates(adapter, action);
+    await executeWithGates({ adapter, action, jsonMode, promptUser });
   }
 }
 
@@ -142,7 +140,7 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
     process.exit(1);
   }
 
-  await executeWithGates(adapter, action);
+  await executeWithGates({ adapter, action, jsonMode, promptUser });
 }
 
 async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {
@@ -163,63 +161,7 @@ async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {
   console.log('\nUsa: buffy doctor para ver el estado de tu sistema.\n');
 }
 
-// ─── Unified Execution Pipeline ──────────────────────────────
-// Single path for ALL action execution (cmdAct + cmdDiagnose)
-// Gates: forbidden → platform → prerequisites → auth → execute → verify → persist
-async function executeWithGates(
-  adapter: Awaited<ReturnType<typeof createAdapter>>,
-  action: import('./core/types.js').ActionDefinition,
-): Promise<void> {
-  if (isForbidden(action)) {
-    console.error(`Acción prohibida: ${action.name}`);
-    return;
-  }
 
-  const capabilities = await adapter.capabilities();
-  const plan = await buildExecutionPlan(action, adapter.name, capabilities);
-
-  if (!plan.prerequisitesValid) {
-    console.error(`Faltan dependencias: ${plan.missingPrerequisites.join(', ')}`);
-    return;
-  }
-
-  if (!plan.platformValid) {
-    console.error('Acción no disponible en esta plataforma');
-    return;
-  }
-
-  if (jsonMode) {
-    console.log(toJSON(plan));
-    return;
-  }
-
-  if (plan.dryRunResult) {
-    console.log(`\n📋 ${action.name}`);
-    console.log(`   ${action.description}`);
-    console.log(`   Acción: ${plan.dryRunResult}`);
-    console.log('');
-  }
-
-  // Authorization gate
-  if (requiresAuth(action)) {
-    const answer = await promptUser();
-    if (answer.toLowerCase() !== 'sí' && answer.toLowerCase() !== 'si' && answer.toLowerCase() !== 'y') {
-      console.log('Acción cancelada.');
-      return;
-    }
-  }
-
-  const result = await executeAction(action);
-  console.log(renderActionResult(result));
-
-  // Persist
-  updateState({
-    actionHistory: [
-      ...loadState().actionHistory,
-      { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
-    ].slice(-50),
-  });
-}
 
 // ─── Helpers ────────────────────────────────────────────────
 
