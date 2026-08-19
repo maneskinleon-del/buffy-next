@@ -15,20 +15,21 @@ function detectPlatform(): 'windows' | 'android-termux' | 'unknown' {
 
   // Android/Termux detection
   if (platform === 'linux') {
-    // Check for Termux environment
+    // Any of these indicators is sufficient for Termux detection
     const isTermux = !!process.env.TERMUX_VERSION
       || !!process.env.TERMUX_APP_PACKAGE_MANAGER
       || process.env.PREFIX?.includes('com.termux')
-      || process.env.HOME?.includes('com.termux');
+      || process.env.HOME?.includes('com.termux')
+      || process.env.PREFIX?.includes('/data/data/com.termux');
 
-    if (isTermux) {
-      // Check if running on Android (not just Linux in Termux)
-      const isAndroid = !!process.env.SERIAL
-        || !!process.env.ANDROID_ROOT
-        || !!process.env.ANDROID_DATA;
+    // Android indicators — one is enough
+    const isAndroid = !!process.env.SERIAL
+      || !!process.env.ANDROID_ROOT
+      || !!process.env.ANDROID_DATA
+      || !!process.env.ANDROID_HOME;
 
-      if (isAndroid) return 'android-termux';
-    }
+    // If either Termux or Android indicators match, it's android-termux
+    if (isTermux || isAndroid) return 'android-termux';
   }
 
   return 'unknown';

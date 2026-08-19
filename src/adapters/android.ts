@@ -79,15 +79,21 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
 
     // Memory from /proc/meminfo
     const memRaw = sh('cat /proc/meminfo 2>/dev/null');
-    const totalKB = parseInt(memRaw.match(/^MemTotal:\s+(\d+)/)?.[1] ?? '0', 10);
-    const availKB = parseInt(memRaw.match(/^MemAvailable:\s+(\d+)/)?.[1] ?? '0', 10);
+    const totalKB = parseInt(memRaw.match(/^MemTotal:\s+(\d+)/m)?.[1] ?? '0', 10);
+    // MemAvailable may not exist on older kernels; fall back to MemFree
+    let availKB = parseInt(memRaw.match(/^MemAvailable:\s+(\d+)/m)?.[1] ?? '0', 10);
+    if (!availKB) {
+      availKB = parseInt(memRaw.match(/^MemFree:\s+(\d+)/m)?.[1] ?? '0', 10);
+    }
     const totalGB = Math.round((totalKB / 1048576) * 10) / 10;
     const availableGB = Math.round((availKB / 1048576) * 10) / 10;
 
-    // GPU via ADB dumpsys
+    // GPU — try multiple sources: ADB dumpsys, getprop, or local GL renderer
     const gpuName = adbShell('dumpsys SurfaceFlinger 2>/dev/null | grep -i "GLES" | head -1')
       .replace(/^GLES:\s*/, '')
-      || sh('getprop ro.hardware.egl') || 'Unknown GPU';
+      || sh('getprop ro.hardware.egl')
+      || sh('getprop ro.board.platform')
+      || 'Unknown GPU';
 
     // Temperature from thermal zones
     const thermalRaw = sh('cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | head -5');
@@ -96,24 +102,53 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length / 1000)
       : 0;
 
-    // Storage
-    const dfRaw = sh("df -BM /data 2>/dev/null | tail -1");
-    const dfParts = dfRaw.split(/\s+/);
-    const storageTotalMB = parseInt(dfParts[1] ?? '0', 10);
-    const storageUsedMB = parseInt(dfParts[2] ?? '0', 10);
-    const storageFreeMB = parseInt(dfParts[3] ?? '0', 10);
+    // Storage — df /data outputs 1K-blocks (df -BM may not work on Termux)
+    let storageTotalKB = 0;
+    let storageUsedKB = 0;
+    let storageFreeKB = 0;
+    // Primary: df /data (1K-blocks)
+    const dfRaw = sh('df /data 2>/dev/null | tail -1');
+    const dfParts = dfRaw.split(/\s+/).filter(Boolean);
+    if (dfParts.length >= 4) {
+      // Columns: Filesystem 1K-blocks Used Available Use% Mounted
+      storageTotalKB = parseInt(dfParts[1] ?? '', 10) || 0;
+      storageUsedKB = parseInt(dfParts[2] ?? '', 10) || 0;
+      storageFreeKB = parseInt(dfParts[3] ?? '', 10) || 0;
+    }
+    // Fallback: stat -f /data (Blocks: Total: N Free: N Available: N)
+    if (!storageTotalKB) {
+      const statRaw = sh('stat -f /data 2>/dev/null');
+      const totalBlocks = parseInt(statRaw.match(/Total:\s+(\d+)/)?.[1] ?? '', 10) || 0;
+      const freeBlocks = parseInt(statRaw.match(/Free:\s+(\d+)/)?.[1] ?? '', 10) || 0;
+      if (totalBlocks) {
+        storageTotalKB = totalBlocks * 4; // 4KB block size
+        storageFreeKB = freeBlocks * 4;
+        storageUsedKB = storageTotalKB - storageFreeKB;
+      }
+    }
 
-    // Processes via ADB
-    const psRaw = adbShell('ps -A -o PID,NAME,%CPU,RSS 2>/dev/null | head -20');
-    const processes = psRaw.split('\n').filter(Boolean).map((line) => {
+    // Processes — Termux `ps -A` columns: PID TTY TIME CMD (no RSS/CPU)
+    const psRaw = sh('ps -A 2>/dev/null | head -20');
+    const psLines = psRaw.split('\n').filter(Boolean);
+    const processes = psLines.map((line) => {
       const parts = line.trim().split(/\s+/);
+      const pid = parseInt(parts[0] ?? '', 10);
+      if (isNaN(pid) || pid === 0) return null; // skip header or invalid
+      // ps -A columns: PID TTY TIME CMD
+      // No RSS in default ps; read from /proc/[pid]/status
+      let rssMB = 0;
+      try {
+        const status = sh(`cat /proc/${pid}/status 2>/dev/null | grep VmRSS`);
+        const rssKB2 = parseInt(status.match(/VmRSS:\s+(\d+)/)?.[1] ?? '0', 10);
+        rssMB = Math.round(rssKB2 / 1024);
+      } catch { /* ignore */ }
       return {
-        pid: parseInt(parts[0] ?? '0', 10),
-        name: parts[1] ?? 'unknown',
-        cpuPercent: parseFloat(parts[2] ?? '0'),
-        memoryMB: Math.round((parseInt(parts[3] ?? '0', 10) * 1024) / 1048576),
+        pid,
+        name: parts[parts.length - 1] ?? 'unknown',
+        cpuPercent: 0, // not available in default ps
+        memoryMB: rssMB,
       };
-    });
+    }).filter((p): p is NonNullable<typeof p> => p !== null);
 
     return {
       os: {
@@ -131,9 +166,9 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       storage: [
         {
           mount: '/data',
-          totalGB: Math.round((storageTotalMB / 1024) * 10) / 10,
-          freeGB: Math.round((storageFreeMB / 1024) * 10) / 10,
-          usedPercent: storageTotalMB > 0 ? Math.round((storageUsedMB / storageTotalMB) * 100) : 0,
+          totalGB: Math.round((storageTotalKB / 1048576) * 10) / 10,
+          freeGB: Math.round((storageFreeKB / 1048576) * 10) / 10,
+          usedPercent: storageTotalKB > 0 ? Math.round((storageUsedKB / storageTotalKB) * 100) : 0,
         },
       ],
       temperature: { cpuCelsius: avgTemp },

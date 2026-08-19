@@ -44,22 +44,36 @@ export const listProcesses: ActionDefinition = {
           },
         };
       } else {
-        // Android/Termux: ps sorted by CPU
+        // Android/Termux: parse `ps -A` output (PID TTY TIME CMD)
+        // No RSS/CPU in default ps; read memory from /proc/[pid]/status
         output = execSync(
-          'ps -A -o PID,NAME,%CPU,RSS --sort=-%cpu 2>/dev/null | head -16 || ps aux 2>/dev/null | head -16',
+          'ps -A 2>/dev/null | head -16',
           { encoding: 'utf-8', timeout: 5_000 },
         );
 
-        const lines = output.trim().split('\n').slice(1); // skip header
-        const processes = lines.map(line => {
-          const parts = line.trim().split(/\s+/);
-          return {
-            pid: parseInt(parts[0] ?? '0', 10),
-            name: parts[1] ?? parts[parts.length - 1] ?? '?',
-            cpuPercent: parseFloat(parts[2] ?? '0'),
-            memoryMB: Math.round((parseInt(parts[3] ?? '0', 10) * 1024) / 1048576),
-          };
-        });
+        const lines = output.trim().split('\n');
+        const processes = lines
+          .filter(line => /^\s*\d+/.test(line)) // only lines starting with a PID
+          .map(line => {
+            const parts = line.trim().split(/\s+/);
+            const pid = parseInt(parts[0] ?? '0', 10);
+            // Read VmRSS from /proc/[pid]/status for memory usage
+            let memoryMB = 0;
+            try {
+              const status = execSync(
+                `cat /proc/${pid}/status 2>/dev/null | grep VmRSS`,
+                { encoding: 'utf-8', timeout: 2_000 },
+              );
+              const rssKB = parseInt(status.match(/VmRSS:\s+(\d+)/)?.[1] ?? '0', 10);
+              memoryMB = Math.round(rssKB / 1024);
+            } catch { /* process may have exited */ }
+            return {
+              pid,
+              name: parts[parts.length - 1] ?? '?',
+              cpuPercent: 0, // not available in default ps output
+              memoryMB,
+            };
+          });
 
         return {
           success: true,
