@@ -4,6 +4,7 @@
 import { createAdapter } from './adapters/index.js';
 import { runDoctor } from './core/doctor.js';
 import { diagnose } from './core/diagnose.js';
+import { buildContext } from './core/context.js';
 import { findActionById } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
 import { setInstallTarget } from './actions/catalog/install-tool.js';
@@ -19,6 +20,7 @@ import { loadState, updateState, ensureBuffyDir } from './state/store.js';
 const args = process.argv.slice(2);
 const command = args[0] || '';
 const jsonMode = args.includes('--json');
+const contextMode = args.includes('--context');
 
 async function main() {
   ensureBuffyDir();
@@ -81,7 +83,10 @@ async function cmdDoctor(adapter: Awaited<ReturnType<typeof createAdapter>>) {
   const report = await runDoctor(adapter);
   updateState({ lastScan: report.timestamp });
 
-  if (jsonMode) {
+  if (contextMode) {
+    const context = buildContext(report);
+    console.log(toJSON(context));
+  } else if (jsonMode) {
     console.log(toJSON(report));
   } else {
     console.log(renderDoctorReport(report));
@@ -169,6 +174,7 @@ Buffy — Asistente técnico de diagnóstico
 Uso:
   buffy                          Presentación + doctor rápido
   buffy doctor                   Auditoría completa del sistema
+  buffy doctor --context         Contexto del sistema para agentes externos (JSON)
   buffy capabilities             Qué puede hacer Buffy
   buffy diagnose "tu problema"   Diagnóstico dirigido
   buffy act <action-id> [args]    Ejecutar una acción
