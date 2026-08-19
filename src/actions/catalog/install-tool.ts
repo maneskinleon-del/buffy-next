@@ -23,13 +23,19 @@ export const installTool: ActionDefinition = {
   description: 'Instala una herramienta en el sistema vía gestor de paquetes',
   level: 'confirm',
   reversible: false,
-  platforms: ['windows', 'android-termux'],
+  platforms: ['windows', 'android-termux', 'linux'],
   prerequisites: [],
 
   async dryRun() {
     if (process.platform === 'win32') {
       return `winget install ${pendingTool}`;
     } else {
+      // Detect Linux package manager
+      const pm = detectLinuxPackageManager();
+      if (pm === 'apt') return `sudo apt install -y ${pendingTool}`;
+      if (pm === 'dnf') return `sudo dnf install -y ${pendingTool}`;
+      if (pm === 'pacman') return `sudo pacman -S --noconfirm ${pendingTool}`;
+      if (pm === 'zypper') return `sudo zypper install -y ${pendingTool}`;
       return `pkg install -y ${pendingTool}`;
     }
   },
@@ -45,10 +51,18 @@ export const installTool: ActionDefinition = {
           { encoding: 'utf-8', timeout: 120_000 },
         );
       } else {
-        result = execSync(
-          `pkg install -y ${pendingTool}`,
-          { encoding: 'utf-8', timeout: 120_000 },
-        );
+        const pm = detectLinuxPackageManager();
+        if (pm === 'apt') {
+          result = execSync(`sudo apt install -y ${pendingTool}`, { encoding: 'utf-8', timeout: 120_000 });
+        } else if (pm === 'dnf') {
+          result = execSync(`sudo dnf install -y ${pendingTool}`, { encoding: 'utf-8', timeout: 120_000 });
+        } else if (pm === 'pacman') {
+          result = execSync(`sudo pacman -S --noconfirm ${pendingTool}`, { encoding: 'utf-8', timeout: 120_000 });
+        } else if (pm === 'zypper') {
+          result = execSync(`sudo zypper install -y ${pendingTool}`, { encoding: 'utf-8', timeout: 120_000 });
+        } else {
+          result = execSync(`pkg install -y ${pendingTool}`, { encoding: 'utf-8', timeout: 120_000 });
+        }
       }
 
       return {
@@ -85,4 +99,28 @@ export const installTool: ActionDefinition = {
  */
 export function setInstallTarget(toolName: string): void {
   pendingTool = sanitizeToolName(toolName);
+}
+
+/**
+ * Detect Linux package manager.
+ */
+function detectLinuxPackageManager(): 'apt' | 'dnf' | 'pacman' | 'zypper' | null {
+  const { execSync } = require('child_process');
+  try {
+    execSync('command -v apt', { encoding: 'utf-8', timeout: 2000 });
+    return 'apt';
+  } catch { /* ignore */ }
+  try {
+    execSync('command -v dnf', { encoding: 'utf-8', timeout: 2000 });
+    return 'dnf';
+  } catch { /* ignore */ }
+  try {
+    execSync('command -v pacman', { encoding: 'utf-8', timeout: 2000 });
+    return 'pacman';
+  } catch { /* ignore */ }
+  try {
+    execSync('command -v zypper', { encoding: 'utf-8', timeout: 2000 });
+    return 'zypper';
+  } catch { /* ignore */ }
+  return null;
 }

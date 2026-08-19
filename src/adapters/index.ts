@@ -4,6 +4,7 @@
 import type { PlatformAdapter } from '../core/types.js';
 import { WindowsAdapter } from './windows.js';
 import { AndroidTermuxAdapter } from './android.js';
+import { LinuxAdapter } from './linux.js';
 // Legacy alias for old code that imports AndroidTermuxAdapter from this path
 export { AndroidTermuxAdapter } from './android.js';
 
@@ -40,7 +41,7 @@ export function detectPlatform(
 
     if (isAndroid) return 'android-termux';
 
-    // Pure Linux desktop — supported in Phase 2, not yet implemented
+    // Pure Linux desktop — Phase 2
     return 'linux';
   }
 
@@ -62,10 +63,7 @@ export async function createAdapter(): Promise<PlatformAdapter> {
       return new AndroidTermuxAdapter();
 
     case 'linux':
-      throw new Error(
-        'LinuxAdapter no está implementado todavía (Fase 2). '
-        + 'Buffy Next actualmente soporta Windows y Android/Termux.',
-      );
+      return new LinuxAdapter();
 
     case 'unknown':
     default:
