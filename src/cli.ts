@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 // Buffy Next — CLI Entry Point
 // Dispatches commands to the appropriate modules
 
@@ -13,7 +11,6 @@ import {
   renderGreeting,
   renderDoctorReport,
   renderDiagnosticReport,
-  renderActionResult,
   renderCapabilities,
   toJSON,
 } from './core/presenter.js';
