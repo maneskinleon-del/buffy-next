@@ -8,6 +8,7 @@ import { checkSystemTemp } from './catalog/check-system-temp.js';
 import { checkGpuDriver } from './catalog/check-gpu-driver.js';
 import { listProcesses } from './catalog/list-processes.js';
 import { installTool } from './catalog/install-tool.js';
+import { checkShizuku } from './catalog/check-shizuku.js';
 
 const ALL_ACTIONS: ActionDefinition[] = [
   checkGpuDriver,
@@ -16,6 +17,7 @@ const ALL_ACTIONS: ActionDefinition[] = [
   listProcesses,
   installTool,
   changePowerPlan,
+  checkShizuku,
 ];
 
 export function getAllActions(): ActionDefinition[] {
