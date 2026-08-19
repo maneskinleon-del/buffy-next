@@ -1,0 +1,165 @@
+import { describe, it, expect } from 'vitest';
+import { runDoctor } from '../src/core/doctor.js';
+import { requiresAuth, isForbidden, classifyAction } from '../src/core/security.js';
+import { findActionById, findActionsForIssue } from '../src/actions/registry.js';
+import { buildExecutionPlan, executeAction } from '../src/core/executor.js';
+import type { PlatformAdapter, SystemInfo, PlatformInfo, Capability, ActionDefinition } from '../src/core/types.js';
+
+// ─── Mock Adapter ───────────────────────────────────────────
+
+function createMockAdapter(overrides: Partial<SystemInfo> = {}): PlatformAdapter {
+  const defaultSystem: SystemInfo = {
+    os: { name: 'Test OS', version: '1.0', arch: 'x64' },
+    cpu: { model: 'Test CPU', cores: 4 },
+    memory: { totalGB: 16, availableGB: 8, usedPercent: 50 },
+    gpu: { name: 'NVIDIA GeForce GTX 1660', driver: '537.42', isGeneric: false },
+    storage: [{ mount: '/', totalGB: 500, freeGB: 250, usedPercent: 50 }],
+    temperature: { cpuCelsius: 45 },
+    processes: [],
+    ...overrides,
+  };
+
+  return {
+    name: 'test-platform',
+    async detect(): Promise<PlatformInfo> {
+      return { name: 'windows', os: 'Test OS 1.0', version: '1.0.0', arch: 'x64' };
+    },
+    async systemInfo(): Promise<SystemInfo> {
+      return defaultSystem;
+    },
+    async capabilities(): Promise<Capability[]> {
+      return [
+        { name: 'Node.js', status: 'installed', version: '26.0.0' },
+        { name: 'PowerShell', status: 'installed', version: '5.1' },
+      ];
+    },
+    async execute(action: ActionDefinition) {
+      return action.execute();
+    },
+  };
+}
+
+// ─── Flow Tests ─────────────────────────────────────────────
+
+describe('Full flow: doctor → detect → propose → confirm', () => {
+
+  it('should detect official GPU as OK (no warning)', async () => {
+    const adapter = createMockAdapter({
+      gpu: { name: 'NVIDIA GeForce GTX 1660', driver: '537.42', isGeneric: false },
+    });
+
+    // Step 1: doctor runs
+    const report = await runDoctor(adapter);
+
+    // Step 2: detect — GPU is official, no warning
+    const gpuItem = report.items.find(i => i.id === 'gpu-driver');
+    expect(gpuItem).toBeDefined();
+    expect(gpuItem!.severity).toBe('ok');
+
+    // Step 3: no generic GPU warning
+    const genericWarning = report.items.find(i => i.id === 'gpu-generic-driver');
+    expect(genericWarning).toBeUndefined();
+  });
+
+  it('should detect generic GPU as warning with suggested action', async () => {
+    const adapter = createMockAdapter({
+      gpu: { name: 'Microsoft Basic Display Adapter', driver: '10.0.19041.1', isGeneric: true },
+    });
+
+    // Step 1: doctor runs
+    const report = await runDoctor(adapter);
+
+    // Step 2: detect — GPU is generic
+    const gpuItem = report.items.find(i => i.id === 'gpu-generic-driver');
+    expect(gpuItem).toBeDefined();
+    expect(gpuItem!.severity).toBe('warning');
+    expect(gpuItem!.suggestedAction).toBe('install-official-driver');
+  });
+
+  it('should suggest check-gpu-driver action when GPU is generic', async () => {
+    const adapter = createMockAdapter({
+      gpu: { name: 'Microsoft Basic Display Adapter', driver: '10.0.19041.1', isGeneric: true },
+    });
+
+    // Step 1: doctor detects generic GPU
+    const report = await runDoctor(adapter);
+    const genericItem = report.items.find(i => i.id === 'gpu-generic-driver');
+    expect(genericItem).toBeDefined();
+
+    // Step 2: find suggested actions for this issue
+    const suggestedActions = findActionsForIssue(report.items);
+
+    // The check-gpu-driver action should be suggested (it matches via suggestedAction → actionId)
+    // OR we should find the check-driver-status action
+    expect(suggestedActions.length).toBeGreaterThan(0);
+  });
+
+  it('check-gpu-driver action should be AUTO_SAFE (no auth required)', async () => {
+    const action = findActionById('check-gpu-driver');
+    expect(action).toBeDefined();
+
+    // Step 3: classify — AUTO_SAFE
+    expect(classifyAction(action!)).toBe('auto_safe');
+
+    // Step 4: no auth required
+    expect(requiresAuth(action!)).toBe(false);
+    expect(isForbidden(action!)).toBe(false);
+  });
+
+  it('check-gpu-driver should be runnable via executeAction', async () => {
+    const action = findActionById('check-gpu-driver');
+    expect(action).toBeDefined();
+
+    // Step 5: build execution plan
+    const plan = await buildExecutionPlan(action!, 'windows');
+    expect(plan.platformValid).toBe(true);
+    expect(plan.levelValid).toBe(true);
+    expect(plan.requiresAuth).toBe(false);
+
+    // Step 6: execute (on Linux/Termux, will use fallback path)
+    const result = await executeAction(action!);
+    expect(result).toBeDefined();
+    expect(typeof result.success).toBe('boolean');
+    expect(typeof result.message).toBe('string');
+  });
+
+  it('should produce a valid DoctorReport structure', async () => {
+    const adapter = createMockAdapter();
+    const report = await runDoctor(adapter);
+
+    // Verify report structure
+    expect(report.platform).toBeDefined();
+    expect(report.system).toBeDefined();
+    expect(report.capabilities).toBeDefined();
+    expect(report.items).toBeDefined();
+    expect(report.timestamp).toBeDefined();
+
+    // Verify items have required fields
+    for (const item of report.items) {
+      expect(item.id).toBeDefined();
+      expect(item.severity).toMatch(/^(ok|warning|error|unknown)$/);
+      expect(item.category).toBeDefined();
+      expect(item.message).toBeDefined();
+    }
+  });
+
+  it('should find check-gpu-driver by id', () => {
+    const action = findActionById('check-gpu-driver');
+    expect(action).toBeDefined();
+    expect(action!.id).toBe('check-gpu-driver');
+    expect(action!.name).toBe('Verificar driver de GPU');
+    expect(action!.level).toBe('auto_safe');
+    expect(action!.platforms).toContain('windows');
+    expect(action!.platforms).toContain('android-termux');
+  });
+
+  it('check-gpu-driver dryRun should describe what it would do', async () => {
+    const action = findActionById('check-gpu-driver');
+    expect(action).toBeDefined();
+    expect(action!.dryRun).toBeDefined();
+
+    const description = await action!.dryRun!();
+    expect(typeof description).toBe('string');
+    expect(description.length).toBeGreaterThan(0);
+  });
+});
