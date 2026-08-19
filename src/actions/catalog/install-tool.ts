@@ -4,9 +4,18 @@
 import type { ActionDefinition } from '../../core/types.js';
 
 // The tool name is passed via a module variable set before execution.
-// In a real CLI, this would come from arguments. For the MVP,
-// the action works with the last-set tool name.
+// Input is sanitized: only alphanumeric, hyphens, dots, and underscores.
 let pendingTool: string = 'node';
+
+/** Sanitize tool name: reject shell metacharacters, allow only safe package identifiers */
+function sanitizeToolName(name: string): string {
+  // Only allow: letters, numbers, hyphens, dots, underscores, slashes (for scoped packages)
+  const sanitized = name.replace(/[^a-zA-Z0-9._\-/]/g, '');
+  if (!sanitized || sanitized.length === 0 || sanitized.length > 100) {
+    throw new Error(`Nombre de paquete inválido: "${name}"`);
+  }
+  return sanitized;
+}
 
 export const installTool: ActionDefinition = {
   id: 'install-tool',
@@ -75,5 +84,5 @@ export const installTool: ActionDefinition = {
  * Set the tool to install. Used by CLI when parsing arguments.
  */
 export function setInstallTarget(toolName: string): void {
-  pendingTool = toolName;
+  pendingTool = sanitizeToolName(toolName);
 }

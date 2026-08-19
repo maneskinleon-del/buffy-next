@@ -9,6 +9,7 @@ import { diagnose } from './core/diagnose.js';
 import { findActionById } from './actions/registry.js';
 import { buildExecutionPlan, executeAction } from './core/executor.js';
 import { requiresAuth, isForbidden } from './core/security.js';
+import { setInstallTarget } from './actions/catalog/install-tool.js';
 import {
   renderGreeting,
   renderDoctorReport,
@@ -44,7 +45,7 @@ async function main() {
         await cmdDiagnose(adapter, args.slice(1).join(' '));
         break;
       case 'act':
-        await cmdAct(adapter, args[1]);
+        await cmdAct(adapter, args[1], args[2]);
         break;
       case 'setup':
         await cmdSetup(adapter);
@@ -118,31 +119,20 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
   console.log(renderDiagnosticReport(result.items));
 
   for (const action of result.suggestedActions) {
-    const dryRunResult = action.dryRun ? await action.dryRun() : undefined;
-    console.log(renderProposal({
-      name: action.name,
-      description: action.description,
-      level: action.level,
-      reversible: action.reversible,
-      dryRun: dryRunResult,
-    }));
-
-    if (requiresAuth(action)) {
-      const answer = await promptUser();
-      if (answer.toLowerCase() === 'sí' || answer.toLowerCase() === 'si' || answer.toLowerCase() === 'y') {
-        const result = await executeAction(action);
-        console.log(renderActionResult(result));
-      } else {
-        console.log('Acción cancelada.');
-      }
-    }
+    await executeWithGates(adapter, action);
   }
 }
 
-async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, actionId: string | undefined) {
+async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, actionId: string | undefined, extraArg?: string) {
   if (!actionId) {
-    console.error('Uso: buffy act <action-id>');
+    console.error('Uso: buffy act <action-id> [args]');
+    console.error('Ejemplo: buffy act install-tool node');
     process.exit(1);
+  }
+
+  // Actions that accept extra arguments
+  if (actionId === 'install-tool' && extraArg) {
+    setInstallTarget(extraArg);
   }
 
   const action = findActionById(actionId);
@@ -152,57 +142,7 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
     process.exit(1);
   }
 
-  if (isForbidden(action)) {
-    console.error(`Acción prohibida: ${action.name}`);
-    process.exit(1);
-  }
-
-  // P0-1: Validate prerequisites against adapter capabilities
-  const capabilities = await adapter.capabilities();
-  const plan = await buildExecutionPlan(action, adapter.name, capabilities);
-
-  if (!plan.prerequisitesValid) {
-    console.error(`Faltan dependencias: ${plan.missingPrerequisites.join(', ')}`);
-    console.error('Instálalas antes de ejecutar esta acción.');
-    process.exit(1);
-  }
-
-  if (!plan.platformValid) {
-    console.error('Acción no disponible en esta plataforma');
-    process.exit(1);
-  }
-
-  if (jsonMode) {
-    console.log(toJSON(plan));
-    return;
-  }
-
-  if (plan.dryRunResult) {
-    console.log(`\n📋 ${action.name}`);
-    console.log(`   ${action.description}`);
-    console.log(`   Acción: ${plan.dryRunResult}`);
-    console.log('');
-  }
-
-  // Revalidate auth per spec v2.1
-  if (requiresAuth(action)) {
-    const answer = await promptUser();
-    if (answer.toLowerCase() !== 'sí' && answer.toLowerCase() !== 'si' && answer.toLowerCase() !== 'y') {
-      console.log('Acción cancelada.');
-      return;
-    }
-  }
-
-  const result = await executeAction(action);
-  console.log(renderActionResult(result));
-
-  // P0-3: Register action in state.json
-  updateState({
-    actionHistory: [
-      ...loadState().actionHistory,
-      { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
-    ].slice(-50), // Keep last 50
-  });
+  await executeWithGates(adapter, action);
 }
 
 async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {
@@ -223,6 +163,64 @@ async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {
   console.log('\nUsa: buffy doctor para ver el estado de tu sistema.\n');
 }
 
+// ─── Unified Execution Pipeline ──────────────────────────────
+// Single path for ALL action execution (cmdAct + cmdDiagnose)
+// Gates: forbidden → platform → prerequisites → auth → execute → verify → persist
+async function executeWithGates(
+  adapter: Awaited<ReturnType<typeof createAdapter>>,
+  action: import('./core/types.js').ActionDefinition,
+): Promise<void> {
+  if (isForbidden(action)) {
+    console.error(`Acción prohibida: ${action.name}`);
+    return;
+  }
+
+  const capabilities = await adapter.capabilities();
+  const plan = await buildExecutionPlan(action, adapter.name, capabilities);
+
+  if (!plan.prerequisitesValid) {
+    console.error(`Faltan dependencias: ${plan.missingPrerequisites.join(', ')}`);
+    return;
+  }
+
+  if (!plan.platformValid) {
+    console.error('Acción no disponible en esta plataforma');
+    return;
+  }
+
+  if (jsonMode) {
+    console.log(toJSON(plan));
+    return;
+  }
+
+  if (plan.dryRunResult) {
+    console.log(`\n📋 ${action.name}`);
+    console.log(`   ${action.description}`);
+    console.log(`   Acción: ${plan.dryRunResult}`);
+    console.log('');
+  }
+
+  // Authorization gate
+  if (requiresAuth(action)) {
+    const answer = await promptUser();
+    if (answer.toLowerCase() !== 'sí' && answer.toLowerCase() !== 'si' && answer.toLowerCase() !== 'y') {
+      console.log('Acción cancelada.');
+      return;
+    }
+  }
+
+  const result = await executeAction(action);
+  console.log(renderActionResult(result));
+
+  // Persist
+  updateState({
+    actionHistory: [
+      ...loadState().actionHistory,
+      { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
+    ].slice(-50),
+  });
+}
+
 // ─── Helpers ────────────────────────────────────────────────
 
 function showHelp() {
@@ -234,7 +232,8 @@ Uso:
   buffy doctor                   Auditoría completa del sistema
   buffy capabilities             Qué puede hacer Buffy
   buffy diagnose "tu problema"   Diagnóstico dirigido
-  buffy act <action-id>          Ejecutar una acción
+  buffy act <action-id> [args]    Ejecutar una acción
+    ej: buffy act install-tool node
   buffy setup                    Bootstrap de Buffy
   --json                         Salida en formato JSON
   --help                         Esta ayuda
