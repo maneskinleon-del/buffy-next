@@ -1,7 +1,7 @@
 // Buffy Next — Security
 // Risk classification and authorization for actions
 
-import type { ActionLevel, ActionDefinition } from './types.js';
+import type { ActionLevel, ActionDefinition, Capability } from './types.js';
 
 /**
  * Classify an action by its risk level
@@ -61,4 +61,28 @@ export function validateAction(action: ActionDefinition, currentPlatform: string
   }
 
   return { valid: true };
+}
+
+/**
+ * Check that all prerequisites for an action are available
+ */
+export function checkPrerequisites(
+  action: ActionDefinition,
+  capabilities: Capability[],
+): { valid: boolean; missing: string[] } {
+  if (action.prerequisites.length === 0) {
+    return { valid: true, missing: [] };
+  }
+
+  const installed = new Set(
+    capabilities
+      .filter(c => c.status === 'installed')
+      .map(c => c.name.toLowerCase()),
+  );
+
+  const missing = action.prerequisites.filter(
+    p => !installed.has(p.toLowerCase()),
+  );
+
+  return { valid: missing.length === 0, missing };
 }

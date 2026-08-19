@@ -6,6 +6,9 @@ import type { ActionDefinition } from '../../core/types.js';
 const HIGH_PERFORMANCE_GUID = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
 
 let previousPlan: string | null = null;
+// NOTE: previousPlan is module-scoped. If the process restarts between execute and rollback,
+// the rollback data is lost. For production, persist via ActionResult.details + state.json.
+// For now, this works because Buffy CLI runs as a single process.
 
 export const changePowerPlan: ActionDefinition = {
   id: 'change-power-plan',
@@ -46,7 +49,7 @@ export const changePowerPlan: ActionDefinition = {
         message: isHighPerf
           ? 'Plan de energía cambiado a "Alto rendimiento"'
           : 'No se pudo cambiar el plan de energía',
-        details: { active, previous: previousPlan },
+        details: { active, previous: previousPlan, previousPlan },
       };
     } catch (error) {
       return {

@@ -157,7 +157,34 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
     process.exit(1);
   }
 
-  // Revalidate everything per spec v2.1
+  // P0-1: Validate prerequisites against adapter capabilities
+  const capabilities = await adapter.capabilities();
+  const plan = await buildExecutionPlan(action, adapter.name, capabilities);
+
+  if (!plan.prerequisitesValid) {
+    console.error(`Faltan dependencias: ${plan.missingPrerequisites.join(', ')}`);
+    console.error('Instálalas antes de ejecutar esta acción.');
+    process.exit(1);
+  }
+
+  if (!plan.platformValid) {
+    console.error('Acción no disponible en esta plataforma');
+    process.exit(1);
+  }
+
+  if (jsonMode) {
+    console.log(toJSON(plan));
+    return;
+  }
+
+  if (plan.dryRunResult) {
+    console.log(`\n📋 ${action.name}`);
+    console.log(`   ${action.description}`);
+    console.log(`   Acción: ${plan.dryRunResult}`);
+    console.log('');
+  }
+
+  // Revalidate auth per spec v2.1
   if (requiresAuth(action)) {
     const answer = await promptUser();
     if (answer.toLowerCase() !== 'sí' && answer.toLowerCase() !== 'si' && answer.toLowerCase() !== 'y') {
@@ -168,6 +195,14 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
 
   const result = await executeAction(action);
   console.log(renderActionResult(result));
+
+  // P0-3: Register action in state.json
+  updateState({
+    actionHistory: [
+      ...loadState().actionHistory,
+      { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
+    ].slice(-50), // Keep last 50
+  });
 }
 
 async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {

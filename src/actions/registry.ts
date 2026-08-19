@@ -6,12 +6,16 @@ import { checkDriverStatus } from './catalog/check-driver-status.js';
 import { changePowerPlan } from './catalog/change-power-plan.js';
 import { checkSystemTemp } from './catalog/check-system-temp.js';
 import { checkGpuDriver } from './catalog/check-gpu-driver.js';
+import { listProcesses } from './catalog/list-processes.js';
+import { installTool } from './catalog/install-tool.js';
 
 const ALL_ACTIONS: ActionDefinition[] = [
   checkGpuDriver,
   checkDriverStatus,
-  changePowerPlan,
   checkSystemTemp,
+  listProcesses,
+  installTool,
+  changePowerPlan,
 ];
 
 export function getAllActions(): ActionDefinition[] {
