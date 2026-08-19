@@ -74,9 +74,40 @@ experiments/context-agent-spike/
     └── (agent responses here)    # Respuestas del agente
 ```
 
-## Nota conocida
+## Resultados
 
-El adapter actual detecta esta máquina como `android-termux` debido a variables de entorno Android en el PATH (`ANDROID_ROOT`, etc.). Esto es un bug pre-existente del adapter factory (Linux no tiene adapter propio aún). El experimento usa el JSON tal cual — lo que un agente vería realmente.
+### Spike 1 — Linux (251e931 → 3a3fe9d)
+
+**Plataforma:** EndeavourOS (Linux desktop) + ANDROID_HOME configurado + ADB instalado + ZTE conectado.
+
+**Resultado:** El adapter detectó falsamente `android-termux` y mezcló datos del host Linux con el GPU del teléfono ZTE. El agente (AGY) detectó la inconsistencia.
+
+**Corrección:** `3a3fe9d` — ANDROID_HOME y SERIAL eliminados como indicadores. Solo `ANDROID_ROOT=/system` + `ANDROID_DATA=/data` juntos. Ahora detecta `linux` correctamente.
+
+**Regla congelada:** ADB conectado es una capacidad del host, NO evidencia de que el host sea Android.
+
+### Spike 2 — Windows (post-3a3fe9d)
+
+**Plataforma:** Windows 10 Enterprise LTSC, i5-3330, 11.9 GB RAM, GPU "Unknown GPU".
+
+**Resultado:** PASS con observaciones.
+
+| Afirmación del agente | Evaluación |
+|---|---|
+| i5-3330 / 4 cores | ✅ Sustentado por JSON |
+| Windows 10 Enterprise LTSC | ✅ Sustentado por JSON |
+| 11.9 GB RAM | ✅ Sustentado por JSON |
+| C: 69% / D: 16% | ✅ Sustentado por JSON |
+| Node/npm/Git/Python/PowerShell | ✅ Sustentado por JSON |
+| GPU "Unknown GPU" | ✅ Sustentado por JSON |
+| "No soporta AVX2" | ⚠️ Conocimiento externo, no del JSON |
+| "GPU Intel HD 2500" | ⚠️ Inferencia — JSON dice "Unknown GPU" |
+| "11.9 GB probablemente 8+4" | ⚠️ Especulación — JSON no dice configuración DIMM |
+| "69% uso puede degradarse" | ⚠️ Inferencia razonable pero no sustentada |
+
+**Hallazgo:** El agente distingue correctamente los datos del JSON pero añade conocimiento externo/inferencias. Esto NO es un fallo de Buffy — es un comportamiento del agente consumidor.
+
+**Implicación:** El Context Package funciona como contrato. El problema de inferencias está en la capa de consumo, no en la de producción. No requiere cambios en Buffy.
 
 ## Criterio de éxito
 
