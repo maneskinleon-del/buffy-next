@@ -23,10 +23,13 @@ function ps(command: string): string {
 }
 
 function psJson<T>(command: string): T | null {
-  const raw = ps(`${command} | ConvertTo-Json -Compress`);
+  const raw = ps(`${command} | ConvertTo-Json -Compress -Depth 1`);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as T;
+    const parsed = JSON.parse(raw);
+    // ConvertTo-Json with single object returns {} not [{}]
+    // Normalize to array for consistency with WmiVideoController[] etc.
+    return (Array.isArray(parsed) ? parsed : [parsed]) as T;
   } catch {
     return null;
   }
@@ -145,10 +148,11 @@ export class WindowsAdapter implements PlatformAdapter {
       };
     });
 
-    // WMI returns tenths of Kelvin
-    const cpuCelsius = temps?.CurrentTemperature
-      ? Math.round((temps.CurrentTemperature / 10) - 273.15)
-      : 0;
+    // WMI returns tenths of Kelvin — explicit null check (0 is not absence)
+    const rawTemp = temps?.CurrentTemperature;
+    const cpuCelsius = rawTemp != null
+      ? Math.round((rawTemp / 10) - 273.15)
+      : null;
 
     const processes = (procs ?? []).map((p) => ({
       pid: p.ProcessId ?? 0,
@@ -170,7 +174,7 @@ export class WindowsAdapter implements PlatformAdapter {
       memory: { totalGB, availableGB, usedPercent: totalGB > 0 ? Math.round(((totalGB - availableGB) / totalGB) * 100) : 0 },
       gpu: { name: gpuName, driver: gpuDriver, isGeneric: isGenericGpu(gpuName) },
       storage: storageDevices,
-      temperature: { cpuCelsius },
+      temperature: { cpuCelsius: cpuCelsius ?? 0 },
       processes,
     };
   }
