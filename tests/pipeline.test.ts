@@ -160,7 +160,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
 
     await executeWithGates({ adapter, action: actionWithPrereqs });
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Faltan dependencias'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Prerequisito no satisfecho'));
     expect(updateState).not.toHaveBeenCalled();
     logSpy.mockRestore();
   });

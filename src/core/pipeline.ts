@@ -32,10 +32,23 @@ export async function executeWithGates(options: PipelineOptions): Promise<void> 
 
   // Gate 2: Platform + prerequisites + dryRun
   const capabilities = await adapter.capabilities();
-  const plan = await buildExecutionPlan(action, adapter.name, capabilities);
+  const system = await adapter.systemInfo();
+  const privileges = system.privileges;
+  const plan = await buildExecutionPlan(action, adapter.name, capabilities, privileges);
 
   if (!plan.prerequisitesValid) {
-    console.error(`Faltan dependencias: ${plan.missingPrerequisites.join(', ')}`);
+    console.error(`\n❌ Prerequisito no satisfecho`);
+    for (const p of plan.missingPrerequisites) {
+      const isPrivilege = ['shell', 'shizuku', 'root', 'adb'].includes(p.toLowerCase());
+      if (isPrivilege) {
+        console.error(`   Necesario: ${p}`);
+        console.error(`   Disponible: no`);
+        console.error(`   Sugerencia: inicia ${p} y vuelve a intentarlo.`);
+      } else {
+        console.error(`   ${p}: no instalado`);
+      }
+    }
+    console.error('');
     return;
   }
 

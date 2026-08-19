@@ -1,7 +1,7 @@
 // Buffy Next — Executor
 // Executes actions with authorization, verification, and reporting
 
-import type { ActionDefinition, ActionResult, Capability } from './types.js';
+import type { ActionDefinition, ActionResult, Capability, PlatformCapabilities } from './types.js';
 import { classifyAction, validateAction, checkPrerequisites } from './security.js';
 
 export interface ExecutionPlan {
@@ -21,10 +21,11 @@ export async function buildExecutionPlan(
   action: ActionDefinition,
   platform: string,
   capabilities: Capability[] = [],
+  privileges?: PlatformCapabilities,
   dryRun: boolean = true,
 ): Promise<ExecutionPlan> {
   const validation = validateAction(action, platform);
-  const prereqCheck = checkPrerequisites(action, capabilities);
+  const prereqCheck = checkPrerequisites(action, capabilities, privileges);
   const level = classifyAction(action);
   const requiresAuth = level === 'confirm';
 
