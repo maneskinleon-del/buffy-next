@@ -170,7 +170,7 @@ export interface ActionRecord {
  *
  * Rules:
  *  - null = data not available on this platform (NOT 0, NOT "")
- *  - tools[].available = tool is functional/usable, not just binary found
+ *  - tools[].available = adapter found binary + retrieved version (status='installed')
  *  - schema is versioned; v2 may add fields, never remove
  *  - processes[], items[], checks are intentionally excluded
  */
@@ -233,10 +233,22 @@ export interface BuffyContext {
     node_version: string | null;
   };
 
-  /** Detected tools — available = functional/usable, not just binary found */
+  /**
+   * Detected tools.
+   *
+   * available semantics (congelado):
+   *  - The adapter checks: (1) binary exists via `command -v` / `Get-Command`
+   *    AND (2) version command succeeds. Both must pass for status='installed'.
+   *  - BuffyContext maps status='installed' → available=true.
+   *  - This means: the tool was found AND its version was retrieved.
+   *  - It does NOT mean the tool is configured correctly for a specific task.
+   *
+   * Example: ADB may be installed (available=true) but no device connected.
+   * The agent should check prerequisites per-action, not rely solely on this field.
+   */
   tools: Array<{
     name: string;
-    /** true = Buffy verified the tool works, not just that the binary exists */
+    /** true = adapter found binary + retrieved version (status === 'installed') */
     available: boolean;
     version: string | null;
   }>;

@@ -23,6 +23,13 @@ const jsonMode = args.includes('--json');
 const contextMode = args.includes('--context');
 
 async function main() {
+  // Mutual exclusion: --json and --context cannot coexist
+  if (jsonMode && contextMode) {
+    console.error('Error: --json y --context son mutuamente excluyentes.');
+    console.error('Usa --json para DoctorReport o --context para BuffyContext.');
+    process.exit(1);
+  }
+
   ensureBuffyDir();
 
   try {

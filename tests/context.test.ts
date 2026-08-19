@@ -225,6 +225,26 @@ describe('Context Package — tools.available semantics', () => {
     const ctx = buildContext(report);
     expect(ctx.tools.length).toBe(3);
   });
+
+  it('should map unknown status to available=false', () => {
+    const report = makeReport({
+      capabilities: [
+        { name: 'MysteryTool', status: 'unknown' },
+      ],
+    });
+    const ctx = buildContext(report);
+    expect(ctx.tools[0].available).toBe(false);
+  });
+
+  it('should preserve exact version string when present', () => {
+    const report = makeReport({
+      capabilities: [
+        { name: 'ADB', status: 'installed', version: 'Android Debug Bridge version 1.0.41' },
+      ],
+    });
+    const ctx = buildContext(report);
+    expect(ctx.tools[0].version).toBe('Android Debug Bridge version 1.0.41');
+  });
 });
 
 // ─── Determinism ────────────────────────────────────────────
