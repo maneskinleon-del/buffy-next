@@ -1,7 +1,7 @@
 // Buffy Next — Doctor
 // Runs a full system audit via the platform adapter
 
-import type { PlatformAdapter, DoctorReport, CheckResult, SystemInfo, Capability, PlatformInfo } from './types.js';
+import type { PlatformAdapter, DoctorReport, CheckResult, SystemInfo, Capability, PlatformInfo, PlatformCapabilities } from './types.js';
 
 export async function runDoctor(adapter: PlatformAdapter): Promise<DoctorReport> {
   const [platform, system, capabilities] = await Promise.all([
@@ -16,6 +16,7 @@ export async function runDoctor(adapter: PlatformAdapter): Promise<DoctorReport>
     platform,
     system,
     capabilities,
+    privileges: system.privileges,
     items,
     timestamp: new Date().toISOString(),
   };
@@ -102,6 +103,25 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
         category: 'Dependencias de Buffy',
         message: `${tool.name}: no instalado`,
         explanation: tool.description,
+      });
+    }
+  }
+
+  // Platform privileges check (Android: Shell / Shizuku / Root / ADB)
+  const priv = system.privileges;
+  if (priv) {
+    const privItems: Array<{ id: string; label: string; available: boolean }> = [
+      { id: 'priv-shell', label: 'Shell', available: priv.shell },
+      { id: 'priv-shizuku', label: 'Shizuku', available: priv.shizuku },
+      { id: 'priv-root', label: 'Root', available: priv.root },
+      { id: 'priv-adb', label: 'ADB', available: priv.adb },
+    ];
+    for (const p of privItems) {
+      items.push({
+        id: p.id,
+        severity: p.available ? 'ok' : 'warning',
+        category: 'Plataforma',
+        message: `${p.label}: ${p.available ? 'disponible' : 'no disponible'}`,
       });
     }
   }

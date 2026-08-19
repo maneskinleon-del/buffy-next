@@ -34,6 +34,8 @@ export interface SystemInfo {
   devices?: StorageDevice[];
   temperature: TempInfo | null;
   processes: ProcessInfo[];
+  /** Platform-level privileges detected at runtime */
+  privileges?: PlatformCapabilities;
 }
 
 export interface StorageDevice {
@@ -51,6 +53,18 @@ export interface ProcessInfo {
 }
 
 // ─── Capabilities ──────────────────────────────────────────
+
+/** Platform-level privileges detected at runtime (read-only, never auto-elevated) */
+export interface PlatformCapabilities {
+  /** Basic shell access (Termux /proc, df, ps, etc.) */
+  shell: boolean;
+  /** Shizuku elevated shell via rish */
+  shizuku: boolean;
+  /** Full root access (su) */
+  root: boolean;
+  /** ADB connection available */
+  adb: boolean;
+}
 
 export interface Capability {
   name: string;
@@ -125,6 +139,7 @@ export interface DoctorReport {
   platform: PlatformInfo;
   system: SystemInfo;
   capabilities: Capability[];
+  privileges?: PlatformCapabilities;
   items: CheckResult[];
   timestamp: string;
 }

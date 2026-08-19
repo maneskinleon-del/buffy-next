@@ -9,6 +9,7 @@ import type {
   Capability,
   ActionDefinition,
   ActionResult,
+  PlatformCapabilities,
 } from '../core/types.js';
 
 function sh(command: string): string {
@@ -57,6 +58,40 @@ function isGenericGpu(name: string): boolean {
 
 export class AndroidTermuxAdapter implements PlatformAdapter {
   readonly name = 'android-termux';
+
+  /** Detect platform-level privileges (Shell / Shizuku / Root / ADB) */
+  async detectPrivileges(): Promise<PlatformCapabilities> {
+    // Shell: always true inside Termux
+    const shell = true;
+
+    // Shizuku: check if rish binary is available and Shizuku service responds
+    const rishPath = sh('command -v rish 2>/dev/null');
+    let shizuku = false;
+    if (rishPath) {
+      // Try to actually run a privileged command via rish
+      const rishTest = sh('rish -c "id" 2>/dev/null');
+      shizuku = rishTest.includes('uid=');
+    }
+
+    // Root: check su binary and actual root access
+    const suPath = sh('command -v su 2>/dev/null');
+    let root = false;
+    if (suPath) {
+      const rootTest = sh('su -c "id" 2>/dev/null');
+      root = rootTest.includes('uid=0');
+    }
+
+    // ADB: check if adb binary exists and device is connected
+    const adbPath = sh('command -v adb 2>/dev/null');
+    let adb = false;
+    if (adbPath) {
+      const devices = sh('adb devices 2>/dev/null');
+      // "List of devices attached" followed by at least one device line
+      adb = devices.includes('device') && devices.split('\n').length > 2;
+    }
+
+    return { shell, shizuku, root, adb };
+  }
 
   async detect(): Promise<PlatformInfo> {
     const model = sh('getprop ro.product.model');
@@ -150,6 +185,9 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       };
     }).filter((p): p is NonNullable<typeof p> => p !== null);
 
+    // Detect platform-level privileges
+    const privileges = await this.detectPrivileges();
+
     return {
       os: {
         name: `Android ${sh('getprop ro.build.version.release') || '?'}`,
@@ -173,6 +211,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       ],
       temperature: { cpuCelsius: avgTemp },
       processes,
+      privileges,
     };
   }
 
