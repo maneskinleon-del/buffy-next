@@ -248,7 +248,7 @@ export class LinuxAdapter implements PlatformAdapter {
         isGeneric: gpu.isGeneric ?? true,
       },
       storage,
-      temperature: { cpuCelsius: temperature ?? 0 },
+      temperature: temperature !== null ? { cpuCelsius: temperature } : null,
       processes,
       privileges: await this.detectPrivileges(),
     };

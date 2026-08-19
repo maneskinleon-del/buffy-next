@@ -128,5 +128,21 @@ describe('install-tool — sanitizeToolName via setInstallTarget', () => {
     expect(installTool.reversible).toBe(false);
     expect(installTool.platforms).toContain('windows');
     expect(installTool.platforms).toContain('android-termux');
+    expect(installTool.platforms).toContain('linux');
+  });
+
+  // --- Linux platform support ---
+
+  it('dryRun on Linux should include package manager command', async () => {
+    setInstallTarget('git');
+    const result = await installTool.dryRun!();
+    // Should contain a Linux package manager command or fallback
+    expect(result).toMatch(/(apt|dnf|pacman|zypper|pkg)/);
+  });
+
+  it('platforms array should include all three platforms', () => {
+    expect(installTool.platforms).toEqual(
+      expect.arrayContaining(['windows', 'android-termux', 'linux']),
+    );
   });
 });
