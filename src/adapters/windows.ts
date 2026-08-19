@@ -1,7 +1,7 @@
 // Buffy Next — Windows Adapter
 // Uses PowerShell + WMI for system detection
 
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import type {
   PlatformAdapter,
   PlatformInfo,
@@ -13,9 +13,12 @@ import type {
 
 function ps(command: string): string {
   try {
-    return execSync(
-      `powershell -NoProfile -NonInteractive -Command "${command}"`,
-      { encoding: 'utf-8', timeout: 10_000 },
+    // Use execFileSync to avoid cmd.exe shell interpretation
+    // which can break pipes (|) inside PowerShell commands
+    return execFileSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', command],
+      { encoding: 'utf-8', timeout: 15_000 },
     ).trim();
   } catch {
     return '';
