@@ -1,7 +1,7 @@
 // Buffy Next — Doctor
 // Runs a full system audit via the platform adapter
 
-import type { PlatformAdapter, DoctorReport, CheckResult, SystemInfo, Capability, PlatformInfo, PlatformCapabilities } from './types.js';
+import type { PlatformAdapter, DoctorReport, CheckResult, SystemInfo, Capability, PlatformInfo } from './types.js';
 
 export async function runDoctor(adapter: PlatformAdapter): Promise<DoctorReport> {
   const [platform, system, capabilities] = await Promise.all([

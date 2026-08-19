@@ -86,8 +86,8 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     let adb = false;
     if (adbPath) {
       const devices = sh('adb devices 2>/dev/null');
-      // "List of devices attached" followed by at least one device line
-      adb = devices.includes('device') && devices.split('\n').length > 2;
+      // Match actual device lines: "<serial>\tdevice" (not the header)
+      adb = /^\S+\tdevice$/m.test(devices);
     }
 
     return { shell, shizuku, root, adb };
