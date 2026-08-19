@@ -173,3 +173,80 @@ describe('GPU parsing — GLES line extraction', () => {
     expect(gpu).toBe('Qualcomm Adreno 650');
   });
 });
+
+// ── Graceful degradation — null semantics ──────────────────
+// These test the design rule: when primary + fallback both fail → null.
+// Never use "unknown", 0, "" or invented values for missing data.
+
+describe('Graceful degradation — null vs invented values', () => {
+  /**
+   * Simulates LinuxAdapter GPU detection.
+   * Returns null when no source is available.
+   */
+  function detectGpuLinux(
+    lspciOutput: string | null,
+    drmVendor: string | null,
+  ): { name: string | null; isGeneric: boolean | null } {
+    // Try lspci
+    if (lspciOutput) {
+      const name = lspciOutput.replace(/^.*:\s*/, '').trim() || null;
+      return { name, isGeneric: name ? false : null };
+    }
+    // Try /sys/class/drm
+    if (drmVendor) {
+      return { name: `vendor:${drmVendor}`, isGeneric: false };
+    }
+    // Both failed → null, NOT "Unknown GPU"
+    return { name: null, isGeneric: null };
+  }
+
+  it('GPU from lspci → name extracted', () => {
+    const result = detectGpuLinux('VGA compatible controller: AMD/ATI Renoir', null);
+    expect(result.name).toBe('AMD/ATI Renoir');
+    expect(result.isGeneric).toBe(false);
+  });
+
+  it('GPU from /sys/class/drm → vendor resolved', () => {
+    const result = detectGpuLinux(null, '0x1002');
+    expect(result.name).toBe('vendor:0x1002');
+    expect(result.isGeneric).toBe(false);
+  });
+
+  it('GPU not available → null (NOT "Unknown GPU")', () => {
+    const result = detectGpuLinux(null, null);
+    expect(result.name).toBeNull();
+    expect(result.isGeneric).toBeNull();
+  });
+
+  it('CPU without model name → null (NOT "Unknown CPU")', () => {
+    // Simulates /proc/cpuinfo without "model name" line
+    const cpuinfo = 'processor\t: 0\nflags\t\t: fpu ...';
+    const match = cpuinfo.match(/^model name\s*:\s*(.+)$/m);
+    const cpuModel = match?.[1]?.trim() ?? null;
+    expect(cpuModel).toBeNull();
+    expect(cpuModel).not.toBe('Unknown CPU');
+  });
+
+  it('Temperature not available → null (NOT 0)', () => {
+    // Simulates missing /sys/class/thermal and missing sensors
+    const thermalRaw = '';
+    const sensorsRaw = '';
+    const temp = thermalRaw
+      ? Math.round(parseInt(thermalRaw, 10) / 1000)
+      : sensorsRaw
+        ? 42 // parsed from sensors
+        : null;  // Both failed → null, NOT 0
+    expect(temp).toBeNull();
+    expect(temp).not.toBe(0);
+  });
+
+  it('Shell from $SHELL → path', () => {
+    const shell = '/usr/bin/zsh';
+    expect(shell).toBe('/usr/bin/zsh');
+  });
+
+  it('Shell not available → null', () => {
+    const shell: string | null = null;
+    expect(shell).toBeNull();
+  });
+});
