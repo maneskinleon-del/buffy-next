@@ -12,12 +12,12 @@ import type {
   PlatformCapabilities,
 } from '../core/types.js';
 
-function sh(command: string): string {
+function sh(command: string, extraEnv?: Record<string, string>): string {
   try {
     return execSync(command, {
       encoding: 'utf-8',
       timeout: 10_000,
-      env: { ...process.env, PATH: process.env.PATH ?? '' },
+      env: { ...process.env, PATH: process.env.PATH ?? '', ...extraEnv },
     }).trim();
   } catch {
     return '';
@@ -65,11 +65,12 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     const shell = !!sh('id 2>/dev/null');
 
     // Shizuku: check if rish binary is available and Shizuku service responds
+    // rish requires RISH_APPLICATION_ID (Termux package name) to authenticate
     const rishPath = sh('command -v rish 2>/dev/null');
     let shizuku = false;
     if (rishPath) {
-      // Try to actually run a privileged command via rish
-      const rishTest = sh('rish -c "id" 2>/dev/null');
+      const rishEnv = { RISH_APPLICATION_ID: process.env.RISH_APPLICATION_ID ?? 'com.termux' };
+      const rishTest = sh('rish -c "id" 2>/dev/null', rishEnv);
       shizuku = rishTest.includes('uid=');
     }
 
