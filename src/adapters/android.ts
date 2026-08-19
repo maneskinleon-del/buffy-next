@@ -61,8 +61,8 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
 
   /** Detect platform-level privileges (Shell / Shizuku / Root / ADB) */
   async detectPrivileges(): Promise<PlatformCapabilities> {
-    // Shell: always true inside Termux
-    const shell = true;
+    // Shell: verify with a safe read-only command
+    const shell = !!sh('id 2>/dev/null');
 
     // Shizuku: check if rish binary is available and Shizuku service responds
     const rishPath = sh('command -v rish 2>/dev/null');
