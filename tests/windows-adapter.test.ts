@@ -330,3 +330,48 @@ describe('psJsonArray — array contract', () => {
     expect(result).toEqual([]);
   });
 });
+
+// ─── psJsonArray — CPU usage from Win32_PerfFormattedData ──
+
+describe('WindowsAdapter — CPU usage contract', () => {
+
+  it('PercentProcessorTime _Total → usage number', () => {
+    const raw = JSON.stringify([
+      { Name: '0', PercentProcessorTime: 19 },
+      { Name: '1', PercentProcessorTime: 12 },
+      { Name: '_Total', PercentProcessorTime: 16 },
+    ]);
+    const usageData = parseArray<{ Name?: string; PercentProcessorTime?: number }>(raw);
+    const total = usageData.find((c) => c.Name === '_Total');
+    expect(total).toBeDefined();
+    expect(total!.PercentProcessorTime).toBe(16);
+  });
+
+  it('no _Total entry → usage null', () => {
+    const raw = JSON.stringify([
+      { Name: '0', PercentProcessorTime: 19 },
+    ]);
+    const usageData = parseArray<{ Name?: string; PercentProcessorTime?: number }>(raw);
+    const total = usageData.find((c) => c.Name === '_Total');
+    expect(total).toBeUndefined();
+  });
+
+  it('empty array → usage null', () => {
+    const usageData = parseArray<{ Name?: string; PercentProcessorTime?: number }>([]);
+    const total = usageData.find((c) => c.Name === '_Total');
+    expect(total).toBeUndefined();
+  });
+
+  it('WMI returns null → usage null', () => {
+    const usageData = parseArray<{ Name?: string; PercentProcessorTime?: number }>(null);
+    const total = usageData.find((c) => c.Name === '_Total');
+    expect(total).toBeUndefined();
+  });
+
+  it('PercentProcessorTime = 0 → usage 0 (real value, not null)', () => {
+    const raw = JSON.stringify([{ Name: '_Total', PercentProcessorTime: 0 }]);
+    const usageData = parseArray<{ Name?: string; PercentProcessorTime?: number }>(raw);
+    const total = usageData.find((c) => c.Name === '_Total');
+    expect(total!.PercentProcessorTime).toBe(0);
+  });
+});

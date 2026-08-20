@@ -93,6 +93,11 @@ interface WmiTemp {
   CurrentTemperature?: number;
 }
 
+interface WmiCpuUsage {
+  Name?: string;
+  PercentProcessorTime?: number;
+}
+
 interface WmiProcess {
   ProcessId?: number;
   Name?: string;
@@ -115,7 +120,7 @@ export class WindowsAdapter implements PlatformAdapter {
   }
 
   async systemInfo(): Promise<SystemInfo> {
-    const [osData, cpuData, memData, gpuData, disks, temps, procs] = await Promise.all([
+    const [osData, cpuData, memData, gpuData, disks, temps, procs, cpuUsage] = await Promise.all([
       psJson<WmiOs>(
         'Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,OSArchitecture',
       ),
@@ -136,6 +141,9 @@ export class WindowsAdapter implements PlatformAdapter {
       ),
       psJsonArray<WmiProcess>(
         'Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 20 ProcessId,Name,WorkingSetSize',
+      ),
+      psJsonArray<WmiCpuUsage>(
+        'Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor | Select-Object Name,PercentProcessorTime',
       ),
     ]);
 
@@ -183,7 +191,7 @@ export class WindowsAdapter implements PlatformAdapter {
       cpu: {
         model: cpuData?.Name ?? 'Unknown CPU',
         cores: cpuData?.NumberOfCores ?? 0,
-        usage: null, // WMI doesn't provide real-time CPU%
+        usage: cpuUsage?.find((c) => c.Name === '_Total')?.PercentProcessorTime ?? null,
       },
       memory: { totalGB, availableGB, usedPercent: totalGB > 0 ? Math.round(((totalGB - availableGB) / totalGB) * 100) : 0 },
       gpu: { name: gpuName, driver: gpuDriver, isGeneric: isGenericGpu(gpuName) },

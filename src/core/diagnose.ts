@@ -28,10 +28,12 @@ function buildObservations(
   if (checks.includes('cpu')) {
     // CPU identity is always known (model, cores).
     // Usage is a runtime metric that may be unavailable.
-    // Severity reflects the hardware identification, not the usage metric.
-    const cpuSeverity = system.cpu.usage != null && system.cpu.usage >= 80
-      ? 'warning'
-      : 'ok';
+    // Severity: unknown when usage unavailable, warning when high, ok otherwise.
+    const cpuSeverity = system.cpu.usage == null
+      ? 'unknown'
+      : system.cpu.usage >= 80
+        ? 'warning'
+        : 'ok';
     obs.push({
       fact: `CPU: ${system.cpu.model} (${system.cpu.cores} cores)`,
       value: system.cpu.cores,

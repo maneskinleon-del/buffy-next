@@ -104,6 +104,39 @@ describe('Diagnose', () => {
     expect(result.observations.length).toBeGreaterThan(0);
   });
 
+  it('CPU usage 17 → severity ok', async () => {
+    const adapter = mockAdapter({ cpu: { model: 'Test CPU', cores: 4, usage: 17 } });
+    const result = await diagnose(adapter, 'lento');
+    const cpuObs = result.observations.find(o => o.category === 'cpu');
+    expect(cpuObs).toBeDefined();
+    expect(cpuObs!.severity).toBe('ok');
+  });
+
+  it('CPU usage 85 → severity warning', async () => {
+    const adapter = mockAdapter({ cpu: { model: 'Test CPU', cores: 4, usage: 85 } });
+    const result = await diagnose(adapter, 'lento');
+    const cpuObs = result.observations.find(o => o.category === 'cpu');
+    expect(cpuObs).toBeDefined();
+    expect(cpuObs!.severity).toBe('warning');
+  });
+
+  it('CPU usage null → severity unknown', async () => {
+    const adapter = mockAdapter({ cpu: { model: 'Test CPU', cores: 4, usage: null } });
+    const result = await diagnose(adapter, 'lento');
+    const cpuObs = result.observations.find(o => o.category === 'cpu');
+    expect(cpuObs).toBeDefined();
+    expect(cpuObs!.severity).toBe('unknown');
+  });
+
+  it('CPU usage null → no CPU inference', async () => {
+    const adapter = mockAdapter({ cpu: { model: 'Test CPU', cores: 4, usage: null } });
+    const result = await diagnose(adapter, 'lento');
+    const cpuInf = result.inferences.find(i =>
+      i.basedOn.some(b => b.includes('CPU'))
+    );
+    expect(cpuInf).toBeUndefined();
+  });
+
   it('should derive inferences from warning/error observations', async () => {
     const adapter = mockAdapter({
       memory: { totalGB: 16, availableGB: 1, usedPercent: 95 },
