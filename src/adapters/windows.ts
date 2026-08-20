@@ -1,7 +1,7 @@
 // Buffy Next — Windows Adapter
 // Uses PowerShell + WMI for system detection
 
-import { execSync, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import type {
   PlatformAdapter,
   PlatformInfo,
@@ -25,16 +25,36 @@ function ps(command: string): string {
   }
 }
 
+/**
+ * Parse PowerShell JSON output — single object contract.
+ * Returns the parsed object as-is, or null if unavailable.
+ * Use for WMI queries that return a single instance:
+ *   Win32_OperatingSystem, Win32_Processor, MSAcpi_ThermalZoneTemperature
+ */
 function psJson<T>(command: string): T | null {
   const raw = ps(`${command} | ConvertTo-Json -Compress -Depth 1`);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw);
-    // ConvertTo-Json with single object returns {} not [{}]
-    // Normalize to array for consistency with WmiVideoController[] etc.
-    return (Array.isArray(parsed) ? parsed : [parsed]) as T;
+    return JSON.parse(raw) as T;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Parse PowerShell JSON output — array contract.
+ * Normalizes single objects to [object] for consistent array handling.
+ * Use for WMI queries that return collections:
+ *   Win32_VideoController, Win32_LogicalDisk, Win32_Process
+ */
+function psJsonArray<T>(command: string): T[] {
+  const raw = ps(`${command} | ConvertTo-Json -Compress -Depth 1`);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed as T[] : [parsed] as T[];
+  } catch {
+    return [];
   }
 }
 
@@ -115,16 +135,16 @@ export class WindowsAdapter implements PlatformAdapter {
       psJson<WmiMemory>(
         'Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory',
       ),
-      psJson<WmiVideoController[]>(
+      psJsonArray<WmiVideoController>(
         'Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,AdapterRAM',
       ),
-      psJson<WmiDisk[]>(
+      psJsonArray<WmiDisk>(
         'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace',
       ),
       psJson<WmiTemp>(
         'Get-CimInstance MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -First 1 CurrentTemperature',
       ),
-      psJson<WmiProcess[]>(
+      psJsonArray<WmiProcess>(
         'Get-CimInstance Win32_Process | Sort-Object WorkingSetSize -Descending | Select-Object -First 20 ProcessId,Name,WorkingSetSize',
       ),
     ]);
@@ -134,11 +154,11 @@ export class WindowsAdapter implements PlatformAdapter {
     const totalGB = Math.round((totalMemKB / 1048576) * 10) / 10;
     const availableGB = Math.round((freeMemKB / 1048576) * 10) / 10;
 
-    const primaryGpu = gpuData?.[0];
+    const primaryGpu = gpuData[0];
     const gpuName = primaryGpu?.Name ?? 'Unknown GPU';
     const gpuDriver = primaryGpu?.DriverVersion ?? 'unknown';
 
-    const storageDevices = (disks ?? []).map((d) => {
+    const storageDevices = disks.map((d) => {
       const total = parseInt(d.Size ?? '0', 10);
       const free = parseInt(d.FreeSpace ?? '0', 10);
       const totalGB = Math.round((total / 1073741824) * 10) / 10;
@@ -157,7 +177,7 @@ export class WindowsAdapter implements PlatformAdapter {
       ? Math.round((rawTemp / 10) - 273.15)
       : null;
 
-    const processes = (procs ?? []).map((p) => ({
+    const processes = procs.map((p) => ({
       pid: p.ProcessId ?? 0,
       name: p.Name ?? 'unknown',
       cpuPercent: 0, // WMI doesn't provide real-time CPU% easily
@@ -177,7 +197,7 @@ export class WindowsAdapter implements PlatformAdapter {
       memory: { totalGB, availableGB, usedPercent: totalGB > 0 ? Math.round(((totalGB - availableGB) / totalGB) * 100) : 0 },
       gpu: { name: gpuName, driver: gpuDriver, isGeneric: isGenericGpu(gpuName) },
       storage: storageDevices,
-      temperature: { cpuCelsius: cpuCelsius ?? 0 },
+      temperature: cpuCelsius != null ? { cpuCelsius } : null,
       processes,
     };
   }

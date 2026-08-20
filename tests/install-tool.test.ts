@@ -133,11 +133,15 @@ describe('install-tool — sanitizeToolName via setInstallTarget', () => {
 
   // --- Linux platform support ---
 
-  it('dryRun on Linux should include package manager command', async () => {
+  it('dryRun should include platform-appropriate package manager command', async () => {
     setInstallTarget('git');
     const result = await installTool.dryRun!();
-    // Should contain a Linux package manager command or fallback
-    expect(result).toMatch(/(apt|dnf|pacman|zypper|pkg)/);
+    if (process.platform === 'win32') {
+      expect(result).toMatch(/winget/);
+    } else {
+      // Linux/Android: apt, dnf, pacman, zypper, or pkg (Termux fallback)
+      expect(result).toMatch(/(apt|dnf|pacman|zypper|pkg)/);
+    }
   });
 
   it('platforms array should include all three platforms', () => {
