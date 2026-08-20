@@ -229,16 +229,16 @@ export class LinuxAdapter implements PlatformAdapter {
         usage: null, // /proc/stat not parsed for real-time CPU%
       },
       memory: {
-        totalGB: mem.totalGB ?? 0,
-        availableGB: mem.availableGB ?? 0,
-        usedPercent: mem.totalGB && mem.availableGB
+        totalGB: mem.totalGB,
+        availableGB: mem.availableGB,
+        usedPercent: mem.totalGB != null && mem.availableGB != null
           ? Math.round(((mem.totalGB - mem.availableGB) / mem.totalGB) * 100)
           : 0,
       },
       gpu: {
         name: gpu.name ?? 'Unknown GPU',
         driver: gpu.driver ?? 'unknown',
-        isGeneric: gpu.isGeneric ?? true,
+        isGeneric: gpu.isGeneric,
       },
       storage,
       temperature: temperature !== null ? { cpuCelsius: temperature } : null,

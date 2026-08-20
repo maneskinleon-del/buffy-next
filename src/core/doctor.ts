@@ -46,9 +46,11 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
     : system.memory.usedPercent > 75 ? 'warning' : 'ok';
   items.push({
     id: 'ram-usage',
-    severity: ramSeverity,
+    severity: system.memory.totalGB != null ? ramSeverity : 'unknown',
     category: 'Hardware',
-    message: `RAM: ${system.memory.totalGB} GB total, ${system.memory.availableGB} GB disponible (${system.memory.usedPercent}% usado)`,
+    message: system.memory.totalGB != null
+      ? `RAM: ${system.memory.totalGB} GB total, ${system.memory.availableGB} GB disponible (${system.memory.usedPercent}% usado)`
+      : 'RAM: información no disponible',
   });
 
   // GPU check

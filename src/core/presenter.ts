@@ -45,7 +45,8 @@ export function renderGreeting(report: DoctorReport): string {
 
   // Platform summary
   lines.push(`  ${report.platform.os} · ${report.system.cpu.model}`);
-  lines.push(`  RAM: ${report.system.memory.totalGB} GB · GPU: ${report.system.gpu.name}`);
+  const ramLabel = report.system.memory.totalGB != null ? `${report.system.memory.totalGB} GB` : 'no disponible';
+  lines.push(`  RAM: ${ramLabel} · GPU: ${report.system.gpu.name}`);
 
   // Problems
   const problems = report.items.filter(i => i.severity !== 'ok');

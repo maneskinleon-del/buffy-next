@@ -42,16 +42,24 @@ function buildObservations(
   }
 
   if (checks.includes('ram')) {
-    const severity = system.memory.usedPercent > 90 ? 'error'
-      : system.memory.usedPercent > 75 ? 'warning' : 'ok';
-    obs.push({
-      fact: `RAM: ${system.memory.availableGB} GB disponibles (${system.memory.usedPercent}% usado)`,
-      value: system.memory.usedPercent,
-      unit: '%',
-      category: 'memory',
-      threshold: { warning: 75, error: 90 },
-      severity,
-    });
+    if (system.memory.totalGB != null && system.memory.availableGB != null) {
+      const severity = system.memory.usedPercent > 90 ? 'error'
+        : system.memory.usedPercent > 75 ? 'warning' : 'ok';
+      obs.push({
+        fact: `RAM: ${system.memory.availableGB} GB disponibles (${system.memory.usedPercent}% usado)`,
+        value: system.memory.usedPercent,
+        unit: '%',
+        category: 'memory',
+        threshold: { warning: 75, error: 90 },
+        severity,
+      });
+    } else {
+      obs.push({
+        fact: 'RAM: información no disponible',
+        category: 'memory',
+        severity: 'unknown',
+      });
+    }
   }
 
   if (checks.includes('gpu')) {

@@ -131,7 +131,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     const temps = thermalRaw.split('\n').map(Number).filter((n) => n > 0);
     const avgTemp = temps.length > 0
       ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length / 1000)
-      : 0;
+      : null;
 
     // Storage — df /data outputs 1K-blocks (df -BM may not work on Termux)
     let storageTotalKB = 0;
@@ -205,7 +205,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
           usedPercent: storageTotalKB > 0 ? Math.round((storageUsedKB / storageTotalKB) * 100) : 0,
         },
       ],
-      temperature: { cpuCelsius: avgTemp },
+      temperature: avgTemp != null ? { cpuCelsius: avgTemp } : null,
       processes,
       privileges,
     };

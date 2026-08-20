@@ -18,8 +18,8 @@ export interface PlatformInfo {
 /** Sub-types for backward compatibility (old android-termux.ts, etc.) */
 export type OSInfo = { name: string; version: string; arch: string };
 export type CPUInfo = { model: string; cores: number; usage: number | null };
-export type MemoryInfo = { totalGB: number; availableGB: number; usedPercent: number };
-export type GPUInfo = { name: string; driver: string; isGeneric: boolean };
+export type MemoryInfo = { totalGB: number | null; availableGB: number | null; usedPercent: number };
+export type GPUInfo = { name: string; driver: string; isGeneric: boolean | null };
 export type StorageInfo = { devices: StorageDevice[] };
 export type TempInfo = { cpuCelsius: number };
 
