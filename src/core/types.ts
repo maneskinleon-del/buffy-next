@@ -123,6 +123,24 @@ export interface CheckResult {
 /** Backward compat alias */
 export type DiagnosticItem = CheckResult;
 
+// ─── Context Scoring (v0.6) ──────────────────────────────
+
+export type Confidence = 'high' | 'medium' | 'low';
+
+/**
+ * Result of context scoring (v0.6).
+ * selectChecks() returns CheckName[] (v0.5-B behavior).
+ * scoreContext() wraps it into CheckSelection with ambiguity/confidence.
+ */
+export interface CheckSelection {
+  /** Checks selected by the lexical selector */
+  checks: CheckName[];
+  /** True when no sufficient evidence to select specific checks */
+  ambiguous: boolean;
+  /** Confidence level in the selection */
+  confidence: Confidence;
+}
+
 // ─── Diagnosis ─────────────────────────────────────────────
 
 export interface DiagnosticResult {

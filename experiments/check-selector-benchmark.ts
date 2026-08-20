@@ -8,6 +8,7 @@
  */
 
 import { selectChecks } from '../src/core/check-selector.js';
+import { scoreContext } from '../src/core/context-scorer.js';
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -301,12 +302,15 @@ const BENCHMARK: BenchmarkQuery[] = [
 
 // ─── Runner ────────────────────────────────────────────────
 
-function runBenchmark(): void {
+function runBenchmark(mode: 'v0.5-B' | 'v0.6' = 'v0.5-B'): void {
   const results: QueryResult[] = [];
   const byCategory: Record<string, QueryResult[]> = {};
 
   for (const q of BENCHMARK) {
-    const actual = selectChecks(q.query);
+    const lexical = selectChecks(q.query);
+    const actual = mode === 'v0.6'
+      ? scoreContext(q.query, lexical).checks
+      : lexical;
     const isAllChecks = actual.length >= 9; // ALL_CHECKS has 10 items
     const expectedSet = new Set(q.expected);
     const actualSet = new Set(actual);
@@ -450,7 +454,7 @@ function runBenchmark(): void {
   console.log('\n' + '═'.repeat(70));
   console.log('  SUMMARY');
   console.log('═'.repeat(70));
-  console.log(`  Selector v0.5-B results.`);
+  console.log(`  Selector ${mode} results.`);
   console.log(`  ${correct}/${total} queries correct (${(correct/total*100).toFixed(1)}%).`);
   console.log(`  Main issues:`);
   if (wrongDefault > 0) console.log(`    - ${wrongDefault} non-diagnostic queries hit ALL_CHECKS (should be [])`);
@@ -460,4 +464,13 @@ function runBenchmark(): void {
   console.log('═'.repeat(70) + '\n');
 }
 
-runBenchmark();
+// Run both modes
+console.log('\n' + '▓'.repeat(70));
+console.log('  MODE: v0.5-B (lexical only)');
+console.log('▓'.repeat(70));
+runBenchmark('v0.5-B');
+
+console.log('\n' + '▓'.repeat(70));
+console.log('  MODE: v0.6 (lexical + context scoring)');
+console.log('▓'.repeat(70));
+runBenchmark('v0.6');
