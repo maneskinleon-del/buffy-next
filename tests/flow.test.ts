@@ -91,7 +91,7 @@ describe('Full flow: doctor → detect → propose → confirm', () => {
     expect(gpuObs!.severity).toBe('warning');
 
     // findActionsForIssue with observations should suggest GPU actions
-    const suggestedActions = findActionsForIssue(result.observations);
+    const suggestedActions = findActionsForIssue(result.observations, 'windows');
     expect(suggestedActions.length).toBeGreaterThan(0);
     expect(suggestedActions.some(sa => sa.action.id === 'check-gpu-driver')).toBe(true);
   });

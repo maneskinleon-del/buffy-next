@@ -82,6 +82,19 @@ export type ActionLevel = SecurityLevel;
 export type DiagnosticSeverity = CheckResult['severity'];
 export type CheckName = string;
 
+/**
+ * Closed set of observation categories.
+ * Using a union type prevents typos (e.g. 'memroy') and makes
+ * CATEGORY_TO_ACTIONS exhaustive at compile time.
+ */
+export type ObservationCategory =
+  | 'cpu'
+  | 'memory'
+  | 'gpu'
+  | 'temperature'
+  | 'processes'
+  | 'storage';
+
 // ─── Actions ───────────────────────────────────────────────
 
 export interface ActionDefinition {
@@ -133,8 +146,8 @@ export interface Observation {
   value?: number;
   /** Unit (%, °C, cores, GB, etc.) */
   unit?: string;
-  /** Category: cpu, memory, gpu, temperature, processes, storage */
-  category: string;
+  /** Category — closed union, prevents typos and ensures exhaustive registry */
+  category: ObservationCategory;
   /** Thresholds that were applied for classification */
   threshold?: {
     warning: number;

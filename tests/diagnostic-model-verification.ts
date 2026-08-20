@@ -8,7 +8,7 @@ import type { PlatformAdapter, SystemInfo } from '../src/core/types.js';
 
 // ─── Mock Adapters ──────────────────────────────────────────
 
-function mockAdapter(overrides: Partial<SystemInfo>): PlatformAdapter {
+function mockAdapter(overrides: Partial<SystemInfo>, platform: string = 'windows'): PlatformAdapter {
   const base: SystemInfo = {
     os: { name: 'Test', version: '1.0', arch: 'x64' },
     cpu: { model: 'Test CPU', cores: 4 },
@@ -20,7 +20,7 @@ function mockAdapter(overrides: Partial<SystemInfo>): PlatformAdapter {
     ...overrides,
   };
   return {
-    name: 'test',
+    name: platform,
     async detect() { return { name: 'windows', os: 'Test', version: '1.0', arch: 'x64' }; },
     async systemInfo() { return base; },
     async capabilities() { return []; },
@@ -137,7 +137,7 @@ async function case3() {
     processes: [
       { pid: 1, name: 'com.freefire', cpuPercent: 52, memoryMB: 900 },
     ],
-  });
+  }, 'android-termux');
 
   const result = await diagnose(adapter, 'mi teléfono se calienta jugando');
 

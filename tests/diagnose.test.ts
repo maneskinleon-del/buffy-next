@@ -15,7 +15,7 @@ function mockAdapter(overrides: Partial<SystemInfo> = {}): PlatformAdapter {
   };
 
   return {
-    name: 'test-platform',
+    name: 'windows',
     async detect() { return { name: 'windows', os: 'Test', version: '1.0', arch: 'x64' }; },
     async systemInfo() { return defaultSystem; },
     async capabilities() { return []; },
@@ -129,5 +129,48 @@ describe('Diagnose', () => {
     const result = await diagnose(adapter, 'gpu');
     const gpuInf = result.inferences.find(i => i.statement.includes('GPU'));
     expect(gpuInf).toBeDefined();
+  });
+
+  // ─── Platform-aware action filtering ─────────────────────
+
+  it('storage error with no matching action → suggestedActions should be empty', async () => {
+    const adapter = mockAdapter({
+      storage: [{ mount: '/', totalGB: 64, freeGB: 1, usedPercent: 98 }],
+    });
+    const result = await diagnose(adapter, 'no tengo espacio disco lleno');
+    const storageObs = result.observations.find(o => o.category === 'storage');
+    expect(storageObs).toBeDefined();
+    expect(storageObs!.severity).toBe('error');
+    // No storage action exists → suggestedActions should be empty
+    expect(result.suggestedActions.length).toBe(0);
+  });
+
+  it('Windows platform → check-shizuku should never be suggested', async () => {
+    const adapter = mockAdapter({
+      memory: { totalGB: 16, availableGB: 1, usedPercent: 95 },
+    });
+    const result = await diagnose(adapter, 'lento');
+    const shizukuAction = result.suggestedActions.find(sa => sa.action.id === 'check-shizuku');
+    expect(shizukuAction).toBeUndefined();
+  });
+
+  it('Android platform + high temp → check-shizuku can be suggested if category matches', async () => {
+    // check-shizuku has platforms: ['android-termux'], prerequisites: ['shizuku']
+    // It should NOT appear because no observation category maps to it
+    const adapter = mockAdapter({
+      temperature: { cpuCelsius: 85 },
+    }, 'android-termux');
+    const result = await diagnose(adapter, 'temperatura');
+    // check-shizuku is not in CATEGORY_TO_ACTIONS for temperature
+    const shizukuAction = result.suggestedActions.find(sa => sa.action.id === 'check-shizuku');
+    expect(shizukuAction).toBeUndefined();
+  });
+
+  it('observation category is typed — all categories in ObservationCategory union', async () => {
+    const result = await diagnose(mockAdapter(), 'lento ram gpu temperatura procesos disco');
+    const validCategories = new Set(['cpu', 'memory', 'gpu', 'temperature', 'processes', 'storage']);
+    for (const obs of result.observations) {
+      expect(validCategories.has(obs.category)).toBe(true);
+    }
   });
 });

@@ -14,7 +14,7 @@ export async function diagnose(
   const systemInfo = await adapter.systemInfo();
   const observations = buildObservations(systemInfo, checks);
   const inferences = deriveInferences(observations);
-  const suggestedActions = findActionsForIssue(observations);
+  const suggestedActions = findActionsForIssue(observations, adapter.name);
 
   return { observations, inferences, suggestedActions };
 }
