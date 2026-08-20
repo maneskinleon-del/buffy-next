@@ -2,12 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { selectChecks } from '../src/core/check-selector.js';
 
 describe('Check Selector', () => {
-  it('should return all checks when no pattern matches', () => {
+  it('should return [] for non-diagnostic query with no diagnostic signals', () => {
     const checks = selectChecks('xyzzy');
-    expect(checks).toContain('os');
+    expect(checks).toEqual([]);
+  });
+
+  it('should return DEFAULT_DIAGNOSTIC_CHECKS for vague diagnostic intent', () => {
+    const checks = selectChecks('algo anda mal');
     expect(checks).toContain('cpu');
+    expect(checks).toContain('ram');
     expect(checks).toContain('gpu');
-    expect(checks.length).toBeGreaterThan(5);
+    expect(checks.length).toBeGreaterThanOrEqual(5);
   });
 
   it('should match performance keywords to cpu/ram/gpu/temperature/processes', () => {
@@ -56,8 +61,21 @@ describe('Check Selector', () => {
     expect(checks.length).toBe(unique.size);
   });
 
-  it('should handle empty query by returning all checks', () => {
+  it('should return [] for empty query (non-diagnostic)', () => {
     const checks = selectChecks('');
-    expect(checks.length).toBeGreaterThan(5);
+    expect(checks).toEqual([]);
+  });
+
+  it('should return [] for greetings', () => {
+    expect(selectChecks('hola')).toEqual([]);
+    expect(selectChecks('buenos días')).toEqual([]);
+    expect(selectChecks('gracias')).toEqual([]);
+    expect(selectChecks('adiós')).toEqual([]);
+  });
+
+  it('should return [] for general non-diagnostic questions', () => {
+    expect(selectChecks('qué puedes hacer')).toEqual([]);
+    expect(selectChecks('cuánto es 2+2')).toEqual([]);
+    expect(selectChecks('cuéntame un chiste')).toEqual([]);
   });
 });

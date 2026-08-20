@@ -93,8 +93,13 @@ describe('Diagnose', () => {
     expect(storageItem!.severity).toBe('error');
   });
 
-  it('should run all checks for empty/generic query', async () => {
+  it('should return no items for empty query (non-diagnostic)', async () => {
     const result = await diagnose(mockAdapter(), '');
+    expect(result.items.length).toBe(0);
+  });
+
+  it('should return default items for vague diagnostic intent', async () => {
+    const result = await diagnose(mockAdapter(), 'algo anda mal');
     expect(result.items.length).toBeGreaterThan(3);
   });
 });
