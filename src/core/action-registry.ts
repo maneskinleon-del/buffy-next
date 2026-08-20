@@ -126,14 +126,14 @@ const ACTION_CATALOG: ActionEntry[] = [
       {
         platform: 'linux',
         ui_path: null,
-        command: 'du -sh ~/.cache 2>/dev/null; echo "---"; journalctl --vacuum-size=100M 2>/dev/null; echo "---"; rm -rf /tmp/* 2>/dev/null',
+        command: 'echo "=== Caché del usuario ===" && du -sh ~/.cache 2>/dev/null && echo "=== Logs del sistema ===" && journalctl --disk-usage 2>/dev/null && echo "=== Limpiando logs antiguos ===" && sudo journalctl --vacuum-size=100M 2>/dev/null && echo "=== Espacio total ===" && df -h /',
         requires: [],
         status: 'verified',
       },
       {
         platform: 'android-termux',
         ui_path: null,
-        command: 'adb shell "pm cache --clear" 2>/dev/null; adb shell "du -sh /data/data" 2>/dev/null | sort -rh | head -10',
+        command: 'echo "=== Apps más pesadas ===" && adb shell "du -sh /data/data/*" 2>/dev/null | sort -rh | head -10 && echo "=== Cache ===" && adb shell "ls -la /data/data/*/cache" 2>/dev/null | head -10',
         requires: ['adb'],
         status: 'partial',
       },
