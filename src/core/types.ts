@@ -141,6 +141,54 @@ export interface CheckSelection {
   confidence: Confidence;
 }
 
+// ─── Action Grounding (v0.7) ──────────────────────────────
+
+/**
+ * Instruction verification status.
+ * Controls output behavior — NOT just metadata.
+ *
+ * - verified:    steps verified for this platform → show steps
+ * - partial:     generic or partially verified steps → show with caveat
+ * - unsupported: no verified procedure → DO NOT invent steps
+ */
+export type InstructionStatus = 'verified' | 'partial' | 'unsupported';
+
+/**
+ * Platform-specific instruction for an action.
+ */
+export interface PlatformInstructions {
+  platform: PlatformName;
+  /** UI navigation path (if applicable) */
+  ui_path: string | null;
+  /** CLI command (if applicable) */
+  command: string | null;
+  /** Prerequisites (admin, root, shizuku, etc.) */
+  requires: string[];
+  /** Verification status — controls output behavior */
+  status: InstructionStatus;
+}
+
+/**
+ * A recommended action with full grounding chain:
+ * observed → inferred → recommended → instruction
+ *
+ * Each level has its own confidence.
+ * action can exist WITHOUT instruction (unsupported).
+ */
+export interface RecommendedAction {
+  id: string;
+  /** What we observed (from diagnosis, measured) */
+  observed: string;
+  /** What we infer (with evidence) */
+  inferred: string;
+  /** What we recommend (high-level action) */
+  recommended: string;
+  /** Platform-specific instructions (may be unsupported) */
+  instructions: PlatformInstructions[];
+  /** Confidence in the recommendation */
+  confidence: Confidence;
+}
+
 // ─── Diagnosis ─────────────────────────────────────────────
 
 export interface DiagnosticResult {
