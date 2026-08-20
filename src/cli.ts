@@ -123,10 +123,10 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
     return;
   }
 
-  console.log(renderDiagnosticReport(result.items));
+  console.log(renderDiagnosticReport(result.observations, result.inferences));
 
-  for (const action of result.suggestedActions) {
-    await executeWithGates({ adapter, action, jsonMode, promptUser });
+  for (const sa of result.suggestedActions) {
+    await executeWithGates({ adapter, action: sa.action, jsonMode, promptUser });
   }
 }
 

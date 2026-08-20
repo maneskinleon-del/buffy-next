@@ -81,17 +81,19 @@ describe('Full flow: doctor → detect → propose → confirm', () => {
       gpu: { name: 'Microsoft Basic Display Adapter', driver: '10.0.19041.1', isGeneric: true },
     });
 
-    // Step 1: doctor detects generic GPU
-    const report = await runDoctor(adapter);
-    const genericItem = report.items.find(i => i.id === 'gpu-generic-driver');
-    expect(genericItem).toBeDefined();
+    // Use diagnose to get Observation[] (the new flow)
+    const { diagnose } = await import('../src/core/diagnose.js');
+    const result = await diagnose(adapter, 'gpu driver pantalla');
 
-    // Step 2: find suggested actions for this issue
-    const suggestedActions = findActionsForIssue(report.items);
+    // GPU observation should be warning
+    const gpuObs = result.observations.find(o => o.category === 'gpu');
+    expect(gpuObs).toBeDefined();
+    expect(gpuObs!.severity).toBe('warning');
 
-    // The check-gpu-driver action should be suggested (it matches via suggestedAction → actionId)
-    // OR we should find the check-driver-status action
+    // findActionsForIssue with observations should suggest GPU actions
+    const suggestedActions = findActionsForIssue(result.observations);
     expect(suggestedActions.length).toBeGreaterThan(0);
+    expect(suggestedActions.some(sa => sa.action.id === 'check-gpu-driver')).toBe(true);
   });
 
   it('check-gpu-driver action should be AUTO_SAFE (no auth required)', async () => {

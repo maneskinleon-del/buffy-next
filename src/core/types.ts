@@ -123,10 +123,42 @@ export interface CheckResult {
 /** Backward compat alias */
 export type DiagnosticItem = CheckResult;
 
+// ─── Observation & Inference ───────────────────────────────
+
+/** A measured fact from the system — pure data, no interpretation */
+export interface Observation {
+  /** Human-readable fact string */
+  fact: string;
+  /** Numeric value if applicable */
+  value?: number;
+  /** Unit (%, °C, cores, GB, etc.) */
+  unit?: string;
+  /** Category: cpu, memory, gpu, temperature, processes, storage */
+  category: string;
+  /** Thresholds that were applied for classification */
+  threshold?: {
+    warning: number;
+    error: number;
+  };
+  /** Severity: ok = within range, warning = exceeded threshold, error = critical */
+  severity: 'ok' | 'warning' | 'error' | 'unknown';
+}
+
+/** An inference derived from observations — possible cause, not confirmed */
+export interface Inference {
+  /** Which observations this inference is based on */
+  basedOn: string[];
+  /** Human-readable inference statement */
+  statement: string;
+  /** Whether this is a possible cause (always true for MVP) */
+  possible: boolean;
+}
+
 // ─── Diagnosis ─────────────────────────────────────────────
 
 export interface DiagnosticResult {
-  items: CheckResult[];
+  observations: Observation[];
+  inferences: Inference[];
   suggestedActions: SuggestedAction[];
 }
 

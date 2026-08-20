@@ -25,18 +25,20 @@ function mockAdapter(overrides: Partial<SystemInfo> = {}): PlatformAdapter {
 
 describe('Diagnose', () => {
 
-  it('should return items and suggestedActions', async () => {
+  it('should return observations, inferences, and suggestedActions', async () => {
     const result = await diagnose(mockAdapter(), 'lento');
-    expect(result.items).toBeDefined();
-    expect(Array.isArray(result.items)).toBe(true);
+    expect(result.observations).toBeDefined();
+    expect(Array.isArray(result.observations)).toBe(true);
+    expect(result.inferences).toBeDefined();
+    expect(Array.isArray(result.inferences)).toBe(true);
     expect(result.suggestedActions).toBeDefined();
   });
 
   it('should include relevant checks for performance query', async () => {
     const result = await diagnose(mockAdapter(), 'mi sistema está lento');
-    const ids = result.items.map(i => i.id);
-    expect(ids).toContain('cpu-status');
-    expect(ids).toContain('ram-status');
+    const categories = result.observations.map(o => o.category);
+    expect(categories).toContain('cpu');
+    expect(categories).toContain('memory');
   });
 
   it('should detect generic GPU as warning', async () => {
@@ -44,10 +46,9 @@ describe('Diagnose', () => {
       gpu: { name: 'Microsoft Basic Display Adapter', driver: '10.0', isGeneric: true },
     });
     const result = await diagnose(adapter, 'gpu driver pantalla');
-    const gpuItem = result.items.find(i => i.id === 'gpu-generic-driver');
-    expect(gpuItem).toBeDefined();
-    expect(gpuItem!.severity).toBe('warning');
-    expect(gpuItem!.suggestedAction).toBe('install-official-driver');
+    const gpuObs = result.observations.find(o => o.category === 'gpu');
+    expect(gpuObs).toBeDefined();
+    expect(gpuObs!.severity).toBe('warning');
   });
 
   it('should detect high RAM usage as error', async () => {
@@ -55,9 +56,9 @@ describe('Diagnose', () => {
       memory: { totalGB: 16, availableGB: 1, usedPercent: 95 },
     });
     const result = await diagnose(adapter, 'memoria ram');
-    const ramItem = result.items.find(i => i.id === 'ram-status');
-    expect(ramItem).toBeDefined();
-    expect(ramItem!.severity).toBe('error');
+    const ramObs = result.observations.find(o => o.category === 'memory');
+    expect(ramObs).toBeDefined();
+    expect(ramObs!.severity).toBe('error');
   });
 
   it('should detect high temperature as error', async () => {
@@ -65,9 +66,9 @@ describe('Diagnose', () => {
       temperature: { cpuCelsius: 85 },
     });
     const result = await diagnose(adapter, 'temperatura');
-    const tempItem = result.items.find(i => i.id === 'temperature-status');
-    expect(tempItem).toBeDefined();
-    expect(tempItem!.severity).toBe('error');
+    const tempObs = result.observations.find(o => o.category === 'temperature');
+    expect(tempObs).toBeDefined();
+    expect(tempObs!.severity).toBe('error');
   });
 
   it('should detect heavy processes as warning', async () => {
@@ -77,10 +78,10 @@ describe('Diagnose', () => {
       ],
     });
     const result = await diagnose(adapter, 'procesos app');
-    const procItem = result.items.find(i => i.id === 'heavy-processes');
-    expect(procItem).toBeDefined();
-    expect(procItem!.severity).toBe('warning');
-    expect(procItem!.message).toContain('chrome');
+    const procObs = result.observations.find(o => o.category === 'processes');
+    expect(procObs).toBeDefined();
+    expect(procObs!.severity).toBe('warning');
+    expect(procObs!.fact).toContain('chrome');
   });
 
   it('should handle storage check', async () => {
@@ -88,13 +89,45 @@ describe('Diagnose', () => {
       storage: [{ mount: '/', totalGB: 100, freeGB: 2, usedPercent: 98 }],
     });
     const result = await diagnose(adapter, 'disco lleno espacio');
-    const storageItem = result.items.find(i => i.id?.startsWith('storage-'));
-    expect(storageItem).toBeDefined();
-    expect(storageItem!.severity).toBe('error');
+    const storageObs = result.observations.find(o => o.category === 'storage');
+    expect(storageObs).toBeDefined();
+    expect(storageObs!.severity).toBe('error');
   });
 
   it('should run all checks for empty/generic query', async () => {
     const result = await diagnose(mockAdapter(), '');
-    expect(result.items.length).toBeGreaterThan(3);
+    expect(result.observations.length).toBeGreaterThan(3);
+  });
+
+  it('should derive inferences from warning/error observations', async () => {
+    const adapter = mockAdapter({
+      memory: { totalGB: 16, availableGB: 1, usedPercent: 95 },
+      temperature: { cpuCelsius: 85 },
+    });
+    const result = await diagnose(adapter, 'lento');
+    // Should have individual inferences + combined
+    expect(result.inferences.length).toBeGreaterThanOrEqual(2);
+    expect(result.inferences.some(i => i.statement.includes('memoria'))).toBe(true);
+    expect(result.inferences.some(i => i.statement.includes('temperatura'))).toBe(true);
+  });
+
+  it('should derive combined inference when both RAM and temp are elevated', async () => {
+    const adapter = mockAdapter({
+      memory: { totalGB: 16, availableGB: 1, usedPercent: 95 },
+      temperature: { cpuCelsius: 85 },
+    });
+    const result = await diagnose(adapter, 'lento');
+    const combined = result.inferences.find(i => i.statement.includes('Combinación'));
+    expect(combined).toBeDefined();
+    expect(combined!.basedOn.length).toBe(2);
+  });
+
+  it('should derive GPU inference when GPU is generic', async () => {
+    const adapter = mockAdapter({
+      gpu: { name: 'Microsoft Basic Display Adapter', driver: '10.0', isGeneric: true },
+    });
+    const result = await diagnose(adapter, 'gpu');
+    const gpuInf = result.inferences.find(i => i.statement.includes('GPU'));
+    expect(gpuInf).toBeDefined();
   });
 });

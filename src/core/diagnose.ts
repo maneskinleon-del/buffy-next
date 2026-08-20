@@ -1,81 +1,79 @@
 // Buffy Next — Diagnose
 // Directed diagnosis based on user query
+// Produces Observations (facts) and Inferences (possible causes) separately
 
-import type { PlatformAdapter, CheckResult, ActionDefinition } from './types.js';
+import type { PlatformAdapter, Observation, Inference, ActionDefinition, DiagnosticResult } from './types.js';
 import { selectChecks } from './check-selector.js';
 import { findActionsForIssue } from '../actions/registry.js';
-
-export interface DiagnosisResult {
-  items: CheckResult[];
-  suggestedActions: ActionDefinition[];
-}
 
 export async function diagnose(
   adapter: PlatformAdapter,
   query: string,
-): Promise<DiagnosisResult> {
+): Promise<DiagnosticResult> {
   const checks = selectChecks(query);
   const systemInfo = await adapter.systemInfo();
-  const items = analyzeForQuery(systemInfo, checks);
-  const suggestedActions = findActionsForIssue(items);
+  const observations = buildObservations(systemInfo, checks);
+  const inferences = deriveInferences(observations);
+  const suggestedActions = findActionsForIssue(observations);
 
-  return { items, suggestedActions };
+  return { observations, inferences, suggestedActions };
 }
 
-function analyzeForQuery(
+function buildObservations(
   system: Awaited<ReturnType<PlatformAdapter['systemInfo']>>,
   checks: string[],
-): CheckResult[] {
-  const items: CheckResult[] = [];
+): Observation[] {
+  const obs: Observation[] = [];
 
   if (checks.includes('cpu')) {
     const cpuOk = !system.cpu.usage || system.cpu.usage < 80;
-    items.push({
-      id: 'cpu-status',
+    obs.push({
+      fact: `CPU: ${system.cpu.model} (${system.cpu.cores} cores)`,
+      value: system.cpu.cores,
+      unit: 'cores',
+      category: 'cpu',
       severity: cpuOk ? 'ok' : 'warning',
-      category: 'CPU',
-      message: `CPU: ${system.cpu.model} (${system.cpu.cores} cores)`,
     });
   }
 
   if (checks.includes('ram')) {
-    const ramSeverity = system.memory.usedPercent > 90 ? 'error'
+    const severity = system.memory.usedPercent > 90 ? 'error'
       : system.memory.usedPercent > 75 ? 'warning' : 'ok';
-    items.push({
-      id: 'ram-status',
-      severity: ramSeverity,
-      category: 'RAM',
-      message: `RAM: ${system.memory.availableGB} GB disponibles (${system.memory.usedPercent}% usado)`,
+    obs.push({
+      fact: `RAM: ${system.memory.availableGB} GB disponibles (${system.memory.usedPercent}% usado)`,
+      value: system.memory.usedPercent,
+      unit: '%',
+      category: 'memory',
+      threshold: { warning: 75, error: 90 },
+      severity,
     });
   }
 
   if (checks.includes('gpu')) {
     if (system.gpu.isGeneric) {
-      items.push({
-        id: 'gpu-generic-driver',
+      obs.push({
+        fact: `GPU: ${system.gpu.name} — driver genérico`,
+        category: 'gpu',
         severity: 'warning',
-        category: 'GPU',
-        message: `GPU: ${system.gpu.name} — driver genérico`,
-        explanation: 'Un driver genérico limita el rendimiento en juegos y apps gráficas.',
-        suggestedAction: 'install-official-driver',
       });
     } else {
-      items.push({
-        id: 'gpu-driver-ok',
+      obs.push({
+        fact: `GPU: ${system.gpu.name} (driver: ${system.gpu.driver})`,
+        category: 'gpu',
         severity: 'ok',
-        category: 'GPU',
-        message: `GPU: ${system.gpu.name} (driver: ${system.gpu.driver})`,
       });
     }
   }
 
   if (checks.includes('temperature') && system.temperature?.cpuCelsius) {
     const temp = system.temperature.cpuCelsius;
-    items.push({
-      id: 'temperature-status',
+    obs.push({
+      fact: `Temperatura CPU: ${temp}°C`,
+      value: temp,
+      unit: '°C',
+      category: 'temperature',
+      threshold: { warning: 65, error: 80 },
       severity: temp > 80 ? 'error' : temp > 65 ? 'warning' : 'ok',
-      category: 'Temperatura',
-      message: `Temperatura CPU: ${temp}°C`,
     });
   }
 
@@ -83,11 +81,13 @@ function analyzeForQuery(
     for (const device of system.storage) {
       const severity = device.usedPercent > 95 ? 'error'
         : device.usedPercent > 85 ? 'warning' : 'ok';
-      items.push({
-        id: `storage-${device.mount}`,
+      obs.push({
+        fact: `Disco ${device.mount}: ${device.freeGB} GB libres / ${device.totalGB} GB`,
+        value: device.freeGB,
+        unit: 'GB',
+        category: 'storage',
+        threshold: { warning: 85, error: 95 },
         severity,
-        category: 'Almacenamiento',
-        message: `Disco ${device.mount}: ${device.freeGB} GB libres / ${device.totalGB} GB`,
       });
     }
   }
@@ -95,21 +95,74 @@ function analyzeForQuery(
   if (checks.includes('processes')) {
     const heavy = system.processes.filter(p => p.cpuPercent > 50);
     if (heavy.length > 0) {
-      items.push({
-        id: 'heavy-processes',
+      obs.push({
+        fact: `Procesos consumiendo mucho CPU: ${heavy.map(p => p.name).join(', ')}`,
+        category: 'processes',
         severity: 'warning',
-        category: 'Procesos',
-        message: `Procesos consumiendo mucho CPU: ${heavy.map(p => p.name).join(', ')}`,
       });
     } else {
-      items.push({
-        id: 'processes-ok',
+      obs.push({
+        fact: 'Sin procesos anómalos detectados',
+        category: 'processes',
         severity: 'ok',
-        category: 'Procesos',
-        message: 'Sin procesos anómalos detectados',
       });
     }
   }
 
-  return items;
+  return obs;
+}
+
+/**
+ * Derive inferences from observations.
+ * Each inference represents a POSSIBLE cause — never a confirmed diagnosis.
+ */
+function deriveInferences(observations: Observation[]): Inference[] {
+  const inferences: Inference[] = [];
+
+  const ramObs = observations.find(o => o.category === 'memory' && o.severity !== 'ok');
+  if (ramObs) {
+    inferences.push({
+      basedOn: [ramObs.fact],
+      statement: `Presión de memoria — ${ramObs.value ?? '?'}% de RAM usado podría contribuir al problema`,
+      possible: true,
+    });
+  }
+
+  const tempObs = observations.find(o => o.category === 'temperature' && o.severity !== 'ok');
+  if (tempObs) {
+    inferences.push({
+      basedOn: [tempObs.fact],
+      statement: `Temperatura elevada — ${tempObs.value ?? '?'}°C podría estar causando throttling`,
+      possible: true,
+    });
+  }
+
+  // Combined inference when both memory and temperature are elevated
+  if (ramObs && tempObs) {
+    inferences.push({
+      basedOn: [ramObs.fact, tempObs.fact],
+      statement: 'Combinación de presión de memoria y temperatura elevada',
+      possible: true,
+    });
+  }
+
+  const gpuObs = observations.find(o => o.category === 'gpu' && o.severity !== 'ok');
+  if (gpuObs) {
+    inferences.push({
+      basedOn: [gpuObs.fact],
+      statement: 'Driver de GPU genérico — podría limitar rendimiento gráfico',
+      possible: true,
+    });
+  }
+
+  const heavyProcesses = observations.find(o => o.category === 'processes' && o.severity !== 'ok');
+  if (heavyProcesses) {
+    inferences.push({
+      basedOn: [heavyProcesses.fact],
+      statement: heavyProcesses.fact,
+      possible: true,
+    });
+  }
+
+  return inferences;
 }

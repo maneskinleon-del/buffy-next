@@ -1,7 +1,7 @@
 // Buffy Next — Action Registry
 // Central catalog of all available actions
 
-import type { CheckResult, ActionDefinition } from '../core/types.js';
+import type { Observation, SuggestedAction, ActionDefinition } from '../core/types.js';
 import { checkDriverStatus } from './catalog/check-driver-status.js';
 import { changePowerPlan } from './catalog/change-power-plan.js';
 import { checkSystemTemp } from './catalog/check-system-temp.js';
@@ -28,26 +28,44 @@ export function findActionById(id: string): ActionDefinition | undefined {
   return ALL_ACTIONS.find(a => a.id === id);
 }
 
-export function findActionsForIssue(items: CheckResult[]): ActionDefinition[] {
-  const actions: ActionDefinition[] = [];
-  const suggestedIds = new Set<string>();
+/**
+ * Explicit mapping: observation category → action IDs that address it.
+ * Only AUTO_SAFE actions are auto-suggested; CONFIRM actions need user initiation.
+ * IMPORTANT: keep in sync with categories in diagnose.ts buildObservations().
+ */
+const CATEGORY_TO_ACTIONS: Record<string, string[]> = {
+  gpu: ['check-gpu-driver', 'check-driver-status'],
+  temperature: ['check-system-temp'],
+  processes: ['list-processes'],
+  memory: ['list-processes'],
+};
 
-  for (const item of items) {
-    if (item.suggestedAction) {
-      suggestedIds.add(item.suggestedAction);
+export function findActionsForIssue(observations: Observation[]): SuggestedAction[] {
+  const results: SuggestedAction[] = [];
+  const seen = new Set<string>();
+
+  for (const obs of observations) {
+    if (obs.severity === 'ok') continue;
+
+    const actionIds = CATEGORY_TO_ACTIONS[obs.category] ?? [];
+    for (const actionId of actionIds) {
+      if (seen.has(actionId)) continue;
+      const action = ALL_ACTIONS.find(a => a.id === actionId);
+      if (action) {
+        results.push({ action, reason: obs.fact });
+        seen.add(actionId);
+      }
     }
   }
 
-  for (const action of ALL_ACTIONS) {
-    if (suggestedIds.has(action.id)) {
-      actions.push(action);
+  // If no specific actions matched, suggest all AUTO_SAFE actions
+  if (results.length === 0) {
+    for (const action of ALL_ACTIONS) {
+      if (action.level === 'auto_safe') {
+        results.push({ action, reason: 'Diagnóstico general del sistema' });
+      }
     }
   }
 
-  // If no specific actions matched, return all AUTO_SAFE actions as suggestions
-  if (actions.length === 0) {
-    return ALL_ACTIONS.filter(a => a.level === 'auto_safe');
-  }
-
-  return actions;
+  return results;
 }
