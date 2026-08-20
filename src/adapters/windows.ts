@@ -193,6 +193,7 @@ export class WindowsAdapter implements PlatformAdapter {
       cpu: {
         model: cpuData?.Name ?? 'Unknown CPU',
         cores: cpuData?.NumberOfCores ?? 0,
+        usage: null, // WMI doesn't provide real-time CPU%
       },
       memory: { totalGB, availableGB, usedPercent: totalGB > 0 ? Math.round(((totalGB - availableGB) / totalGB) * 100) : 0 },
       gpu: { name: gpuName, driver: gpuDriver, isGeneric: isGenericGpu(gpuName) },

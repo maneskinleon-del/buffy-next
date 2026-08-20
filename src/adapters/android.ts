@@ -197,7 +197,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
         version: sh('getprop ro.build.display.id') || 'unknown',
         arch: sh('getprop ro.product.cpu.abi') || process.arch,
       },
-      cpu: { model: cpuModel, cores: cpuCores },
+      cpu: { model: cpuModel, cores: cpuCores, usage: null },
       memory: {
         totalGB,
         availableGB,

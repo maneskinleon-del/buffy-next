@@ -11,7 +11,7 @@ import type { PlatformAdapter, SystemInfo } from '../src/core/types.js';
 function mockAdapter(overrides: Partial<SystemInfo>, platform: string = 'windows'): PlatformAdapter {
   const base: SystemInfo = {
     os: { name: 'Test', version: '1.0', arch: 'x64' },
-    cpu: { model: 'Test CPU', cores: 4 },
+    cpu: { model: 'Test CPU', cores: 4, usage: null },
     memory: { totalGB: 16, availableGB: 8, usedPercent: 50 },
     gpu: { name: 'NVIDIA GTX', driver: '537', isGeneric: false },
     storage: [{ mount: '/', totalGB: 500, freeGB: 250, usedPercent: 50 }],

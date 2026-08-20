@@ -17,7 +17,7 @@ export interface PlatformInfo {
 
 /** Sub-types for backward compatibility (old android-termux.ts, etc.) */
 export type OSInfo = { name: string; version: string; arch: string };
-export type CPUInfo = { model: string; cores: number; usage?: number };
+export type CPUInfo = { model: string; cores: number; usage: number | null };
 export type MemoryInfo = { totalGB: number; availableGB: number; usedPercent: number };
 export type GPUInfo = { name: string; driver: string; isGeneric: boolean };
 export type StorageInfo = { devices: StorageDevice[] };
@@ -80,7 +80,17 @@ export type SecurityLevel = 'auto_safe' | 'confirm' | 'forbidden';
 /** Backward compat alias */
 export type ActionLevel = SecurityLevel;
 export type DiagnosticSeverity = CheckResult['severity'];
-export type CheckName = string;
+/**
+ * Closed set of check names — only checks with real implementations.
+ * Adding a new check requires updating this type AND buildObservations().
+ */
+export type CheckName =
+  | 'cpu'
+  | 'ram'
+  | 'gpu'
+  | 'temperature'
+  | 'processes'
+  | 'storage';
 
 /**
  * Closed set of observation categories.

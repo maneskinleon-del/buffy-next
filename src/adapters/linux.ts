@@ -234,6 +234,7 @@ export class LinuxAdapter implements PlatformAdapter {
       cpu: {
         model: cpu.model ?? 'Unknown CPU',
         cores: cpu.cores,
+        usage: null, // /proc/stat not parsed for real-time CPU%
       },
       memory: {
         totalGB: mem.totalGB ?? 0,

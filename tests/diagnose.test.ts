@@ -5,7 +5,7 @@ import type { PlatformAdapter, SystemInfo } from '../src/core/types.js';
 function mockAdapter(overrides: Partial<SystemInfo> = {}): PlatformAdapter {
   const defaultSystem: SystemInfo = {
     os: { name: 'Test OS', version: '1.0', arch: 'x64' },
-    cpu: { model: 'Test CPU', cores: 4 },
+    cpu: { model: 'Test CPU', cores: 4, usage: null },
     memory: { totalGB: 16, availableGB: 8, usedPercent: 50 },
     gpu: { name: 'NVIDIA GTX', driver: '537', isGeneric: false },
     storage: [{ mount: '/', totalGB: 500, freeGB: 250, usedPercent: 50 }],
@@ -94,9 +94,14 @@ describe('Diagnose', () => {
     expect(storageObs!.severity).toBe('error');
   });
 
-  it('should run all checks for empty/generic query', async () => {
+  it('should return no observations for empty query', async () => {
     const result = await diagnose(mockAdapter(), '');
-    expect(result.observations.length).toBeGreaterThan(3);
+    expect(result.observations.length).toBe(0);
+  });
+
+  it('should return default checks for vague diagnostic query', async () => {
+    const result = await diagnose(mockAdapter(), 'mi PC está raro');
+    expect(result.observations.length).toBeGreaterThan(0);
   });
 
   it('should derive inferences from warning/error observations', async () => {
@@ -172,5 +177,33 @@ describe('Diagnose', () => {
     for (const obs of result.observations) {
       expect(validCategories.has(obs.category)).toBe(true);
     }
+  });
+
+  it('storage error → generates inference', async () => {
+    const adapter = mockAdapter({
+      storage: [{ mount: '/', totalGB: 64, freeGB: 1, usedPercent: 98 }],
+    });
+    const result = await diagnose(adapter, 'disco lleno espacio');
+    const storageInf = result.inferences.find(i => i.statement.includes('espacio disponible'));
+    expect(storageInf).toBeDefined();
+    expect(storageInf!.possible).toBe(true);
+  });
+
+  it('CPU unknown → no false inference', async () => {
+    const adapter = mockAdapter();
+    const result = await diagnose(adapter, 'lento');
+    const cpuInf = result.inferences.find(i =>
+      i.basedOn.some(b => b.includes('CPU'))
+    );
+    expect(cpuInf).toBeUndefined();
+  });
+
+  it('temperature unknown → no false inference', async () => {
+    const adapter = mockAdapter({ temperature: null });
+    const result = await diagnose(adapter, 'temperatura');
+    const tempInf = result.inferences.find(i =>
+      i.statement.includes('temperatura') || i.statement.includes('Temperatura')
+    );
+    expect(tempInf).toBeUndefined();
   });
 });

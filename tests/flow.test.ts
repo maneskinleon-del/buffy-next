@@ -10,7 +10,7 @@ import type { PlatformAdapter, SystemInfo, PlatformInfo, Capability, ActionDefin
 function createMockAdapter(overrides: Partial<SystemInfo> = {}): PlatformAdapter {
   const defaultSystem: SystemInfo = {
     os: { name: 'Test OS', version: '1.0', arch: 'x64' },
-    cpu: { model: 'Test CPU', cores: 4 },
+    cpu: { model: 'Test CPU', cores: 4, usage: null },
     memory: { totalGB: 16, availableGB: 8, usedPercent: 50 },
     gpu: { name: 'NVIDIA GeForce GTX 1660', driver: '537.42', isGeneric: false },
     storage: [{ mount: '/', totalGB: 500, freeGB: 250, usedPercent: 50 }],

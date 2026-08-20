@@ -2,7 +2,7 @@
 // Directed diagnosis based on user query
 // Produces Observations (facts) and Inferences (possible causes) separately
 
-import type { PlatformAdapter, Observation, Inference, ActionDefinition, DiagnosticResult } from './types.js';
+import type { PlatformAdapter, Observation, Inference, ActionDefinition, DiagnosticResult, CheckName } from './types.js';
 import { selectChecks } from './check-selector.js';
 import { findActionsForIssue } from '../actions/registry.js';
 
@@ -21,18 +21,23 @@ export async function diagnose(
 
 function buildObservations(
   system: Awaited<ReturnType<PlatformAdapter['systemInfo']>>,
-  checks: string[],
+  checks: CheckName[],
 ): Observation[] {
   const obs: Observation[] = [];
 
   if (checks.includes('cpu')) {
-    const cpuOk = !system.cpu.usage || system.cpu.usage < 80;
+    // CPU identity is always known (model, cores).
+    // Usage is a runtime metric that may be unavailable.
+    // Severity reflects the hardware identification, not the usage metric.
+    const cpuSeverity = system.cpu.usage != null && system.cpu.usage >= 80
+      ? 'warning'
+      : 'ok';
     obs.push({
       fact: `CPU: ${system.cpu.model} (${system.cpu.cores} cores)`,
       value: system.cpu.cores,
       unit: 'cores',
       category: 'cpu',
-      severity: cpuOk ? 'ok' : 'warning',
+      severity: cpuSeverity,
     });
   }
 
@@ -65,16 +70,24 @@ function buildObservations(
     }
   }
 
-  if (checks.includes('temperature') && system.temperature?.cpuCelsius) {
-    const temp = system.temperature.cpuCelsius;
-    obs.push({
-      fact: `Temperatura CPU: ${temp}°C`,
-      value: temp,
-      unit: '°C',
-      category: 'temperature',
-      threshold: { warning: 65, error: 80 },
-      severity: temp > 80 ? 'error' : temp > 65 ? 'warning' : 'ok',
-    });
+  if (checks.includes('temperature')) {
+    const temp = system.temperature?.cpuCelsius;
+    if (temp != null) {
+      obs.push({
+        fact: `Temperatura CPU: ${temp}°C`,
+        value: temp,
+        unit: '°C',
+        category: 'temperature',
+        threshold: { warning: 65, error: 80 },
+        severity: temp > 80 ? 'error' : temp > 65 ? 'warning' : 'ok',
+      });
+    } else {
+      obs.push({
+        fact: 'Temperatura no disponible en este sistema',
+        category: 'temperature',
+        severity: 'unknown',
+      });
+    }
   }
 
   if (checks.includes('storage')) {
@@ -119,7 +132,7 @@ function buildObservations(
 function deriveInferences(observations: Observation[]): Inference[] {
   const inferences: Inference[] = [];
 
-  const ramObs = observations.find(o => o.category === 'memory' && o.severity !== 'ok');
+  const ramObs = observations.find(o => o.category === 'memory' && (o.severity === 'warning' || o.severity === 'error'));
   if (ramObs) {
     inferences.push({
       basedOn: [ramObs.fact],
@@ -128,7 +141,7 @@ function deriveInferences(observations: Observation[]): Inference[] {
     });
   }
 
-  const tempObs = observations.find(o => o.category === 'temperature' && o.severity !== 'ok');
+  const tempObs = observations.find(o => o.category === 'temperature' && (o.severity === 'warning' || o.severity === 'error'));
   if (tempObs) {
     inferences.push({
       basedOn: [tempObs.fact],
@@ -146,7 +159,7 @@ function deriveInferences(observations: Observation[]): Inference[] {
     });
   }
 
-  const gpuObs = observations.find(o => o.category === 'gpu' && o.severity !== 'ok');
+  const gpuObs = observations.find(o => o.category === 'gpu' && (o.severity === 'warning' || o.severity === 'error'));
   if (gpuObs) {
     inferences.push({
       basedOn: [gpuObs.fact],
@@ -155,11 +168,20 @@ function deriveInferences(observations: Observation[]): Inference[] {
     });
   }
 
-  const heavyProcesses = observations.find(o => o.category === 'processes' && o.severity !== 'ok');
+  const heavyProcesses = observations.find(o => o.category === 'processes' && (o.severity === 'warning' || o.severity === 'error'));
   if (heavyProcesses) {
     inferences.push({
       basedOn: [heavyProcesses.fact],
       statement: heavyProcesses.fact,
+      possible: true,
+    });
+  }
+
+  const storageObs = observations.find(o => o.category === 'storage' && (o.severity === 'warning' || o.severity === 'error'));
+  if (storageObs) {
+    inferences.push({
+      basedOn: [storageObs.fact],
+      statement: 'El espacio disponible es bajo y podría contribuir a problemas de rendimiento',
       possible: true,
     });
   }

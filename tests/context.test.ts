@@ -14,7 +14,7 @@ function makeReport(overrides?: Partial<DoctorReport>): DoctorReport {
     },
     system: {
       os: { name: 'EndeavourOS', version: '6.18.42-1-lts', arch: 'x86_64' },
-      cpu: { model: 'AMD Ryzen 5 3400G', cores: 4 },
+      cpu: { model: 'AMD Ryzen 5 3400G', cores: 4, usage: null },
       memory: { totalGB: 13.0, availableGB: 5.2, usedPercent: 60 },
       gpu: { name: 'AMD Ryzen 5 3400G with Radeon Vega Graphics', driver: 'amdgpu', isGeneric: false },
       storage: [{ mount: '/', totalGB: 476.9, freeGB: 182.3, usedPercent: 62 }],
