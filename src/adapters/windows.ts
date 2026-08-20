@@ -10,6 +10,7 @@ import type {
   ActionDefinition,
   ActionResult,
 } from '../core/types.js';
+import { isGenericGpu } from '../shared/gpu.js';
 
 function ps(command: string): string {
   try {
@@ -96,17 +97,6 @@ interface WmiProcess {
   ProcessId?: number;
   Name?: string;
   WorkingSetSize?: number;
-}
-
-const GENERIC_GPU_PATTERNS = [
-  'Microsoft Basic Display',
-  'Microsoft Basic Render',
-  'Standard VGA',
-  'Microsoft Teredo',
-];
-
-function isGenericGpu(name: string): boolean {
-  return GENERIC_GPU_PATTERNS.some((p) => name.toLowerCase().includes(p.toLowerCase()));
 }
 
 export class WindowsAdapter implements PlatformAdapter {

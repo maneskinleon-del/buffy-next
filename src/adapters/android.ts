@@ -11,6 +11,7 @@ import type {
   ActionResult,
   PlatformCapabilities,
 } from '../core/types.js';
+import { isKnownMobileGpu } from '../shared/gpu.js';
 
 function sh(command: string, extraEnv?: Record<string, string>): string {
   try {
@@ -46,14 +47,6 @@ function adbShellJson<T>(command: string): T | null {
   } catch {
     return null;
   }
-}
-
-// Generic GPU patterns for Android (Mali, Adreno, PowerVR, etc.)
-const MOBILE_GPU_VENDORS = ['Mali', 'Adreno', 'PowerVR', 'Vivante', 'Qualcomm', 'ARM', 'Apple'];
-
-function isGenericGpu(name: string): boolean {
-  if (!name) return true;
-  return !MOBILE_GPU_VENDORS.some((v) => name.toLowerCase().includes(v.toLowerCase()));
 }
 
 export class AndroidTermuxAdapter implements PlatformAdapter {
@@ -203,7 +196,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
         availableGB,
         usedPercent: totalGB > 0 ? Math.round(((totalGB - availableGB) / totalGB) * 100) : 0,
       },
-      gpu: { name: gpuName, driver: 'bundled', isGeneric: isGenericGpu(gpuName) },
+      gpu: { name: gpuName, driver: 'bundled', isGeneric: !isKnownMobileGpu(gpuName) },
       storage: [
         {
           mount: '/data',

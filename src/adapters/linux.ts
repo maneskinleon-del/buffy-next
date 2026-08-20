@@ -11,6 +11,7 @@ import type {
   ActionResult,
   PlatformCapabilities,
 } from '../core/types.js';
+import { isGenericGpu } from '../shared/gpu.js';
 
 function sh(command: string): string {
   try {
@@ -25,15 +26,6 @@ function sh(command: string): string {
 }
 
 // ─── GPU detection ──────────────────────────────────────────
-
-const GENERIC_LINUX_GPU = [
-  'ASPEED', 'Matrox', 'VMware', 'VirtualBox', 'QXL',
-  'Microsoft Basic', 'Cirrus', 'Bochs',
-];
-
-function isGenericLinuxGpu(name: string): boolean {
-  return GENERIC_LINUX_GPU.some((p) => name.toLowerCase().includes(p.toLowerCase()));
-}
 
 function detectGpu(): { name: string | null; driver: string | null; isGeneric: boolean | null } {
   // Try lspci
@@ -51,7 +43,7 @@ function detectGpu(): { name: string | null; driver: string | null; isGeneric: b
     return {
       name,
       driver,
-      isGeneric: name ? isGenericLinuxGpu(name) : null,
+      isGeneric: name ? isGenericGpu(name) : null,
     };
   }
 

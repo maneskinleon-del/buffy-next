@@ -3,19 +3,7 @@
 // Per spec v2.1 §9.1: does NOT install drivers, only detects and reports
 
 import type { ActionDefinition } from '../../core/types.js';
-
-const GENERIC_GPU_PATTERNS = [
-  'Microsoft Basic Display',
-  'Microsoft Basic Render',
-  'Standard VGA',
-  'Microsoft Generic',
-];
-
-function isGenericGpu(name: string): boolean {
-  return GENERIC_GPU_PATTERNS.some((p) =>
-    name.toLowerCase().includes(p.toLowerCase()),
-  );
-}
+import { isGenericGpu } from '../../shared/gpu.js';
 
 export const checkGpuDriver: ActionDefinition = {
   id: 'check-gpu-driver',
