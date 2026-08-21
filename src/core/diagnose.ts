@@ -1,26 +1,65 @@
-// Buffy Next — Diagnose
-// Directed diagnosis based on user query
+// Buffy Next — Diagnose (v0.8 canonical pipeline)
+//
+// SECURITY: diagnose = observe + recommend. NEVER executes actions.
+// Execution is exclusively via cmdAct → executeWithGates.
+//
+// Pipeline:
+//   query → selectChecks → scoreContext → systemInfo → analyzeForQuery → mapActions → DiagnosticResponse
 
-import type { PlatformAdapter, CheckResult, ActionDefinition } from './types.js';
+import type {
+  PlatformAdapter,
+  CheckResult,
+  CheckSelection,
+  RecommendedAction,
+  PlatformName,
+} from './types.js';
 import { selectChecks } from './check-selector.js';
-import { findActionsForIssue } from '../actions/registry.js';
+import { scoreContext } from './context-scorer.js';
+import { mapActions } from './action-mapper.js';
 
-export interface DiagnosisResult {
-  items: CheckResult[];
-  suggestedActions: ActionDefinition[];
+// ─── Output type ───────────────────────────────────────────
+
+export interface DiagnosticResponse {
+  /** Original user query */
+  query: string;
+  /** v0.6: what checks were selected and why */
+  selection: CheckSelection;
+  /** Real system observations with severity */
+  observations: CheckResult[];
+  /** v0.8: recommended actions with instructions and confidence */
+  actions: RecommendedAction[];
+  /** Platform for instruction selection */
+  platform: PlatformName;
 }
+
+// ─── Canonical pipeline ────────────────────────────────────
 
 export async function diagnose(
   adapter: PlatformAdapter,
   query: string,
-): Promise<DiagnosisResult> {
-  const checks = selectChecks(query);
-  const systemInfo = await adapter.systemInfo();
-  const items = analyzeForQuery(systemInfo, checks);
-  const suggestedActions = findActionsForIssue(items);
+): Promise<DiagnosticResponse> {
+  // 1. Lexical selection (v0.5-B)
+  const lexicalChecks = selectChecks(query);
 
-  return { items, suggestedActions };
+  // 2. Context scoring (v0.6) — refines selection with fragment splitting + entity binding
+  const selection = scoreContext(query, lexicalChecks);
+
+  // 3. System data (adapter) — real hardware measurements
+  const systemInfo = await adapter.systemInfo();
+
+  // 4. Observations — convert CheckName[] to CheckResult[] with real severity
+  const observations = analyzeForQuery(systemInfo, selection.checks);
+
+  // 5. Action mapping (v0.8) — eligibility + conflict resolution + instructions
+  const platform = adapter.name as PlatformName;
+  const actions = mapActions(observations, platform);
+
+  return { query, selection, observations, actions, platform };
 }
+
+// ─── Observation builder ───────────────────────────────────
+// Converts CheckName[] (from selector) into CheckResult[] (with real system data).
+// This function is unchanged from the previous version.
 
 function analyzeForQuery(
   system: Awaited<ReturnType<PlatformAdapter['systemInfo']>>,
@@ -57,7 +96,6 @@ function analyzeForQuery(
         category: 'GPU',
         message: `GPU: ${system.gpu.name} — driver genérico`,
         explanation: 'Un driver genérico limita el rendimiento en juegos y apps gráficas.',
-        suggestedAction: 'install-official-driver',
       });
     } else {
       items.push({

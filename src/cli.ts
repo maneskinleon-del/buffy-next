@@ -11,7 +11,7 @@ import { setInstallTarget } from './actions/catalog/install-tool.js';
 import {
   renderGreeting,
   renderDoctorReport,
-  renderDiagnosticReport,
+  renderDiagnosticResponse,
   renderCapabilities,
   toJSON,
 } from './core/presenter.js';
@@ -116,18 +116,16 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
     process.exit(1);
   }
 
-  const result = await diagnose(adapter, query);
+  // SECURITY: diagnose = observe + recommend. NEVER executes actions.
+  // Execution is exclusively via cmdAct → executeWithGates.
+  const response = await diagnose(adapter, query);
 
   if (jsonMode) {
-    console.log(toJSON(result));
+    console.log(toJSON(response));
     return;
   }
 
-  console.log(renderDiagnosticReport(result.items));
-
-  for (const action of result.suggestedActions) {
-    await executeWithGates({ adapter, action, jsonMode, promptUser });
-  }
+  console.log(renderDiagnosticResponse(response));
 }
 
 async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, actionId: string | undefined, extraArg?: string) {

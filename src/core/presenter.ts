@@ -1,7 +1,8 @@
 // Buffy Next — Presenter
 // Formats output for human display and JSON
 
-import type { DoctorReport, DiagnosticItem, Capability, ActionResult, PlatformInfo, SystemInfo } from './types.js';
+import type { DoctorReport, DiagnosticItem, Capability, ActionResult, PlatformInfo, SystemInfo, CheckResult, RecommendedAction } from './types.js';
+import type { DiagnosticResponse } from './diagnose.js';
 
 // ─── Colors ─────────────────────────────────────────────────
 
@@ -220,6 +221,74 @@ function severityIcon(severity: string): string {
 
 function renderSeparator(): string {
   return `${C.dim}${'━'.repeat(40)}${C.reset}`;
+}
+
+// ─── Diagnostic Response (v0.8) ───────────────────────────
+
+export function renderDiagnosticResponse(response: DiagnosticResponse): string {
+  const lines: string[] = [];
+
+  // Selection summary
+  lines.push('');
+  lines.push(`${C.bold}🔍 Diagnosticando: ${C.cyan}"${response.query}"${C.reset}`);
+  lines.push('');
+  lines.push(`  Checks: ${response.selection.checks.join(', ') || '(ninguno)'}`);
+  lines.push(`  Confianza: ${response.selection.confidence}`);
+  if (response.selection.ambiguous) {
+    lines.push(`  ${C.yellow}⚠  Selección ambigua${C.reset}`);
+  }
+  lines.push('');
+
+  // Observations
+  lines.push(`${C.bold}📋 Observaciones${C.reset}`);
+  lines.push(renderSeparator());
+  for (const obs of response.observations) {
+    const icon = severityIcon(obs.severity);
+    lines.push(`  ${icon} ${obs.message}`);
+    if (obs.explanation) {
+      lines.push(`     ${C.dim}${obs.explanation}${C.reset}`);
+    }
+  }
+  lines.push('');
+
+  // Actions
+  if (response.actions.length > 0) {
+    lines.push(`${C.bold}🎯 Acciones recomendadas${C.reset}`);
+    lines.push(renderSeparator());
+    for (const action of response.actions) {
+      const confIcon = action.confidence === 'high' ? E.ok
+        : action.confidence === 'medium' ? E.warn
+        : E.info;
+      lines.push(`  ${confIcon} ${action.recommended}`);
+      lines.push(`     ${C.dim}Observado: ${action.observed}${C.reset}`);
+      lines.push(`     ${C.dim}Inferido: ${action.inferred}${C.reset}`);
+
+      // Platform-specific instructions
+      const platformInst = action.instructions.find(i =>
+        i.platform === response.platform,
+      );
+      if (platformInst) {
+        if (platformInst.status === 'verified') {
+          if (platformInst.ui_path) {
+            lines.push(`     ${C.green}📍 ${platformInst.ui_path}${C.reset}`);
+          }
+          if (platformInst.command) {
+            lines.push(`     ${C.green}💻 ${platformInst.command}${C.reset}`);
+          }
+        } else if (platformInst.status === 'partial') {
+          lines.push(`     ${C.yellow}⚠  Pasos parciales disponibles${C.reset}`);
+        } else {
+          lines.push(`     ${C.dim}ℹ  Sin instrucciones verificadas para esta plataforma${C.reset}`);
+        }
+      }
+      lines.push('');
+    }
+  } else {
+    lines.push(`${C.dim}No se recomiendan acciones para esta consulta.${C.reset}`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }
 
 // ─── JSON output ────────────────────────────────────────────
