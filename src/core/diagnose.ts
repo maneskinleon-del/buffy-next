@@ -12,27 +12,18 @@ import type {
   CheckSelection,
   RecommendedAction,
   PlatformName,
+  Observability,
+  ObservabilityStatus,
 } from './types.js';
 import { selectChecks } from './check-selector.js';
 import { scoreContext } from './context-scorer.js';
 import { mapActions } from './action-mapper.js';
+import { computeNextDiagnostic } from './diagnostic-router.js';
 
 // ─── Output type ───────────────────────────────────────────
 
-/** Why observations may be empty — resolves the [] ambiguity */
-export type ObservabilityStatus =
-  | 'observed'      // checks selected AND observations produced
-  | 'no_evidence'   // no checks selected (non-diagnostic query)
-  | 'unsupported'   // checks selected but adapter/analyzeForQuery can't observe them
-  | 'partial';      // some checks produced observations, others didn't
-
-export interface Observability {
-  status: ObservabilityStatus;
-  /** Human-readable reason for the status */
-  reason: string;
-  /** Which checks were selected but produced no observation */
-  unsupportedChecks?: string[];
-}
+// Re-export Observability types from types.ts (canonical source)
+export type { ObservabilityStatus, Observability } from './types.js';
 
 export interface DiagnosticResponse {
   /** Original user query */
@@ -47,6 +38,8 @@ export interface DiagnosticResponse {
   actions: RecommendedAction[];
   /** Platform for instruction selection */
   platform: PlatformName;
+  /** v0.9: next diagnostic recommendation (optional) */
+  nextDiagnostic?: import('./types.js').DiagnosticRouting;
 }
 
 // ─── Canonical pipeline ────────────────────────────────────
@@ -74,7 +67,12 @@ export async function diagnose(
   const platform = adapter.name as PlatformName;
   const actions = mapActions(observations, platform);
 
-  return { query, selection, observability, observations, actions, platform };
+  // 7. Diagnostic routing (v0.9) — next best check recommendation
+  const nextDiagnostic = computeNextDiagnostic(
+    query, selection, observations, observability,
+  );
+
+  return { query, selection, observability, observations, actions, platform, nextDiagnostic };
 }
 
 // ─── Observability ────────────────────────────────────────

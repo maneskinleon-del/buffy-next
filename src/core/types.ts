@@ -141,6 +141,21 @@ export interface CheckSelection {
   confidence: Confidence;
 }
 
+export type ObservabilityStatus =
+  | 'observed'      // checks selected AND observations produced
+  | 'no_evidence'   // no checks selected (non-diagnostic query)
+  | 'unsupported'   // checks selected but can't observe them
+  | 'partial';      // some checks produced observations, others didn't
+
+export interface Observability {
+  /** Overall diagnostic coverage */
+  status: ObservabilityStatus;
+  /** Human-readable reason for the status */
+  reason: string;
+  /** Checks that could not be performed */
+  unsupportedChecks?: string[];
+}
+
 // ─── Action Grounding (v0.7) ──────────────────────────────
 
 /**
@@ -363,4 +378,109 @@ export interface PlatformAdapter {
 
   /** Ejecutar una acción definida */
   execute(action: ActionDefinition): Promise<ActionResult>;
+}
+
+// ─── Model Feasibility (v0.9) ─────────────────────────────
+
+/** Feasibility level for running a model on this system */
+export type FeasibilityLevel = 'fit' | 'constrained' | 'unfit';
+
+/** Model specification for feasibility check */
+export interface ModelSpec {
+  /** Model name (e.g., 'gemma-2b-q4') */
+  name: string;
+  /** Estimated RAM in GB */
+  estimatedRamGB: number;
+  /** Minimum CPU cores required */
+  minCpuCores: number;
+  /** Does this model require GPU? */
+  requiresGpu: boolean;
+  /** Minimum VRAM in GB (if GPU required) */
+  minVramGB?: number;
+  /** Maximum context length */
+  maxContext: number;
+}
+
+/** Execution limits when model is CONSTRAINED */
+export interface ExecutionLimits {
+  /** Maximum context length (reduced from model max) */
+  maxContext: number;
+  /** Maximum concurrent requests */
+  concurrency: number;
+  /** Whether to monitor memory during execution */
+  monitorMemory: boolean;
+  /** Execution timeout in seconds */
+  timeout: number;
+}
+
+/** Alternative model when current model is UNFIT */
+export interface ModelAlternative {
+  /** Alternative model name */
+  model: string;
+  /** Why this alternative */
+  reason: string;
+  /** Estimated RAM requirement */
+  estimatedRamGB: number;
+  /** Expected feasibility level */
+  expectedLevel: FeasibilityLevel;
+}
+
+/** Model feasibility assessment result */
+export interface ModelFeasibility {
+  /** Feasibility level */
+  level: FeasibilityLevel;
+  /** Reason for this assessment */
+  reason: string;
+  /** Execution limits (if CONSTRAINED) */
+  limits?: ExecutionLimits;
+  /** Alternative models (if UNFIT) */
+  alternatives?: ModelAlternative[];
+}
+
+// ─── Diagnostic Router (v0.9) ─────────────────────────────
+
+/** Next diagnostic recommendation */
+export interface NextDiagnostic {
+  /** Domain the symptom concerns */
+  domain: string;
+  /** Specific check to run */
+  check: string;
+  /** Why this check */
+  reason: string;
+  /** Priority level */
+  priority: 'high' | 'medium' | 'low';
+  /** What evidence this check would produce */
+  requiredEvidence: string[];
+}
+
+/** Evidence gap */
+export interface EvidenceGap {
+  /** Domain with missing evidence */
+  domain: string;
+  /** Importance of this gap */
+  importance: 'critical' | 'useful' | 'optional';
+  /** Why this gap matters */
+  reason: string;
+}
+
+/** Current diagnostic conclusions */
+export interface DiagnosticConclusions {
+  /** Things we can affirm based on observations */
+  supported: string[];
+  /** Things we cannot determine yet */
+  uncertain: string[];
+  /** Things we have no evidence for */
+  unsupported: string[];
+}
+
+/** Diagnostic routing result */
+export interface DiagnosticRouting {
+  /** The symptom domain the user is concerned about */
+  symptomDomain: string;
+  /** What check should be executed next */
+  nextDiagnostic: NextDiagnostic;
+  /** What evidence is still missing */
+  evidenceGaps: EvidenceGap[];
+  /** What can be concluded right now */
+  currentConclusion: DiagnosticConclusions;
 }
