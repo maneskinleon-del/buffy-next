@@ -19,11 +19,28 @@ import { mapActions } from './action-mapper.js';
 
 // ─── Output type ───────────────────────────────────────────
 
+/** Why observations may be empty — resolves the [] ambiguity */
+export type ObservabilityStatus =
+  | 'observed'      // checks selected AND observations produced
+  | 'no_evidence'   // no checks selected (non-diagnostic query)
+  | 'unsupported'   // checks selected but adapter/analyzeForQuery can't observe them
+  | 'partial';      // some checks produced observations, others didn't
+
+export interface Observability {
+  status: ObservabilityStatus;
+  /** Human-readable reason for the status */
+  reason: string;
+  /** Which checks were selected but produced no observation */
+  unsupportedChecks?: string[];
+}
+
 export interface DiagnosticResponse {
   /** Original user query */
   query: string;
   /** v0.6: what checks were selected and why */
   selection: CheckSelection;
+  /** Why observations may be empty — resolves the [] ambiguity */
+  observability: Observability;
   /** Real system observations with severity */
   observations: CheckResult[];
   /** v0.8: recommended actions with instructions and confidence */
@@ -50,11 +67,69 @@ export async function diagnose(
   // 4. Observations — convert CheckName[] to CheckResult[] with real severity
   const observations = analyzeForQuery(systemInfo, selection.checks);
 
-  // 5. Action mapping (v0.8) — eligibility + conflict resolution + instructions
+  // 5. Observability — why observations may be empty
+  const observability = computeObservability(selection.checks, observations);
+
+  // 6. Action mapping (v0.8) — eligibility + conflict resolution + instructions
   const platform = adapter.name as PlatformName;
   const actions = mapActions(observations, platform);
 
-  return { query, selection, observations, actions, platform };
+  return { query, selection, observability, observations, actions, platform };
+}
+
+// ─── Observability ────────────────────────────────────────
+// Resolves the ambiguity of empty observations[]
+
+/** Checks that analyzeForQuery can actually observe */
+const OBSERVABLE_CHECKS = new Set([
+  'cpu', 'ram', 'gpu', 'storage', 'temperature', 'processes',
+]);
+
+function computeObservability(
+  selectedChecks: string[],
+  observations: CheckResult[],
+): Observability {
+  // No checks selected → non-diagnostic query
+  if (selectedChecks.length === 0) {
+    return {
+      status: 'no_evidence',
+      reason: 'Consulta no diagnóstica o sin patrones reconocidos.',
+    };
+  }
+
+  // Some observations produced
+  if (observations.length > 0) {
+    // Check if any selected checks were NOT observable
+    const unsupported = selectedChecks.filter(c => !OBSERVABLE_CHECKS.has(c));
+    if (unsupported.length > 0 && observations.length < selectedChecks.length) {
+      return {
+        status: 'partial',
+        reason: `Algunos checks no son observables: ${unsupported.join(', ')}.`,
+        unsupportedChecks: unsupported,
+      };
+    }
+    return {
+      status: 'observed',
+      reason: `${observations.length} observaciones producidas de ${selectedChecks.length} checks seleccionados.`,
+    };
+  }
+
+  // Checks selected but NO observations produced
+  const unsupported = selectedChecks.filter(c => !OBSERVABLE_CHECKS.has(c));
+  if (unsupported.length > 0) {
+    return {
+      status: 'unsupported',
+      reason: `Checks seleccionados no son observables por el adapter: ${unsupported.join(', ')}.`,
+      unsupportedChecks: unsupported,
+    };
+  }
+
+  // Checks selected, all observable, but none produced observations (unexpected)
+  return {
+    status: 'unsupported',
+    reason: `Checks seleccionados (${selectedChecks.join(', ')}) no produjeron observaciones.`,
+    unsupportedChecks: selectedChecks,
+  };
 }
 
 // ─── Observation builder ───────────────────────────────────

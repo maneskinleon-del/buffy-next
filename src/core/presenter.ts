@@ -2,7 +2,7 @@
 // Formats output for human display and JSON
 
 import type { DoctorReport, DiagnosticItem, Capability, ActionResult, PlatformInfo, SystemInfo, CheckResult, RecommendedAction } from './types.js';
-import type { DiagnosticResponse } from './diagnose.js';
+import type { DiagnosticResponse, Observability } from './diagnose.js';
 
 // ─── Colors ─────────────────────────────────────────────────
 
@@ -236,6 +236,16 @@ export function renderDiagnosticResponse(response: DiagnosticResponse): string {
   lines.push(`  Confianza: ${response.selection.confidence}`);
   if (response.selection.ambiguous) {
     lines.push(`  ${C.yellow}⚠  Selección ambigua${C.reset}`);
+  }
+
+  // Observability
+  const obs = response.observability;
+  if (obs.status !== 'observed') {
+    const icon = obs.status === 'no_evidence' ? E.info
+      : obs.status === 'unsupported' ? E.warn
+      : E.info;
+    lines.push(`  ${icon} Observabilidad: ${obs.status}`);
+    lines.push(`     ${C.dim}${obs.reason}${C.reset}`);
   }
   lines.push('');
 

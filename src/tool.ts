@@ -5,7 +5,7 @@
 // This is a transport layer, not a brain.
 
 import { diagnose as coreDiagnose } from './core/diagnose.js';
-import type { DiagnosticResponse } from './core/diagnose.js';
+import type { DiagnosticResponse, Observability } from './core/diagnose.js';
 import type { PlatformAdapter, PlatformName } from './core/types.js';
 import { getActionIds } from './core/action-registry.js';
 

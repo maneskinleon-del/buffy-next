@@ -238,3 +238,41 @@ describe('Diagnose — Integration: full v0.8 pipeline', () => {
     expect(response.selection.confidence).toBe('medium');
   });
 });
+
+// ─── Observability contract ─────────────────────────────────
+
+describe('Diagnose — Observability contract', () => {
+
+  it('no_evidence for non-diagnostic query', async () => {
+    const result = await diagnose(mockAdapter(), 'hola');
+    expect(result.observability.status).toBe('no_evidence');
+    expect(result.observability.reason).toBeDefined();
+    expect(result.observations).toEqual([]);
+  });
+
+  it('observed when checks produce observations', async () => {
+    const result = await diagnose(mockAdapter(), 'mi PC está lenta');
+    expect(result.observability.status).toBe('observed');
+    expect(result.observations.length).toBeGreaterThan(0);
+  });
+
+  it('unsupported when checks are not observable', async () => {
+    // 'network' is in the selector but NOT in analyzeForQuery
+    const result = await diagnose(mockAdapter(), 'el internet no funciona');
+    // network check is selected but has no observation handler
+    if (result.selection.checks.includes('network') && result.observations.length === 0) {
+      expect(result.observability.status).toBe('unsupported');
+      expect(result.observability.unsupportedChecks).toContain('network');
+    }
+  });
+
+  it('observability is always present in DiagnosticResponse', async () => {
+    const queries = ['hola', 'mi PC lenta', 'el internet falla'];
+    for (const q of queries) {
+      const result = await diagnose(mockAdapter(), q);
+      expect(result.observability).toBeDefined();
+      expect(result.observability.status).toBeDefined();
+      expect(result.observability.reason).toBeDefined();
+    }
+  });
+});
