@@ -229,6 +229,246 @@ const ACTION_CATALOG: ActionEntry[] = [
       },
     ],
   },
+
+  // ── Process Inspection ────────────────────────────────────
+  {
+    id: 'inspect-processes',
+    triggers: ['heavy-processes', 'cpu-status', 'ram-status'],
+    name: 'Inspeccionar procesos en detalle',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: 'Ctrl+Shift+Esc → Administrador de tareas → pestaña Procesos → detalles',
+        command: 'Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 15 Name, @{N="CPU%";E={$_.CPU}}, @{N="RAM_MB";E={[math]::Round($_.WorkingSet64/1MB)}} | Format-Table -AutoSize',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'ps aux --sort=-%mem | head -15',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: 'adb shell ps -A -o PID,NAME,%CPU,%MEM | sort -k3 -rn | head -15',
+        requires: ['adb'],
+        status: 'verified',
+      },
+    ],
+  },
+
+  // ── Startup Inspection ────────────────────────────────────
+  {
+    id: 'check-startup',
+    triggers: ['cpu-status', 'ram-status'],
+    name: 'Revisar programas de inicio',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: 'Ctrl+Shift+Esc → pestaña Inicio → revisar programas que se inician',
+        command: 'Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location | Format-Table -AutoSize',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'systemctl list-unit-files --type=service --state=enabled --no-pager | head -20',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: 'adb shell pm list packages -e | head -20',
+        requires: ['adb'],
+        status: 'partial',
+      },
+    ],
+  },
+
+  // ── App Cache (Android) ───────────────────────────────────
+  {
+    id: 'clear-app-cache',
+    triggers: ['storage-/data'],
+    name: 'Limpiar caché de aplicaciones',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: null,
+        command: null,
+        requires: [],
+        status: 'unsupported',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: null,
+        requires: [],
+        status: 'unsupported',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: 'Configuración → Aplicaciones → seleccionar app → Almacenamiento → Limpiar caché',
+        command: 'adb shell pm list packages -3 | while read pkg; do adb shell pm clear "${pkg#package:}" --cache-only 2>/dev/null; done; echo "Caché limpiada"',
+        requires: ['adb'],
+        status: 'partial',
+      },
+    ],
+  },
+
+  // ── Storage Detail ────────────────────────────────────────
+  {
+    id: 'inspect-storage-detail',
+    triggers: ['storage-/'],
+    name: 'Detalle de uso de espacio en disco',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: 'Explorador de archivos → This PC → clic derecho en C: → Propiedades',
+        command: 'Get-PSDrive C | Select-Object Used, Free | Format-List',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'echo "=== Directorios principales ===" && du -sh /home /var /tmp /opt /usr 2>/dev/null | sort -rh && echo "=== Caché usuario ===" && du -sh ~/.cache 2>/dev/null',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: 'adb shell "du -sh /data/data /sdcard /system 2>/dev/null | sort -rh"',
+        requires: ['adb'],
+        status: 'partial',
+      },
+    ],
+  },
+
+  // ── Restart Service (Linux) ───────────────────────────────
+  {
+    id: 'restart-service',
+    triggers: ['network-status'],
+    name: 'Reiniciar servicio del sistema',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: 'services.msc → buscar servicio → clic derecho → Reiniciar',
+        command: null,
+        requires: [],
+        status: 'partial',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'systemctl list-units --type=service --state=failed --no-pager',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: null,
+        requires: [],
+        status: 'unsupported',
+      },
+    ],
+  },
+
+  // ── Check Permissions ─────────────────────────────────────
+  {
+    id: 'check-permissions',
+    triggers: ['permissions-status', 'tools-status'],
+    name: 'Verificar permisos del sistema',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: 'Configuración → Cuentas → tu usuario → verificar tipo de cuenta',
+        command: 'whoami /priv 2>nul | findstr /i "SeDebug"',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'id && groups',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: 'adb shell pm list permissions -g | head -10 && echo "---" && adb shell getprop ro.build.version.sdk',
+        requires: ['adb'],
+        status: 'partial',
+      },
+    ],
+  },
+
+  // ── Check Tools ───────────────────────────────────────────
+  {
+    id: 'check-tools-availability',
+    triggers: ['tools-status'],
+    name: 'Verificar herramientas instaladas',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: null,
+        command: 'Get-Command adb, python, node, git -ErrorAction SilentlyContinue | Select-Object Name, Source | Format-Table -AutoSize',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'for cmd in adb python3 node git java; do printf "%-10s" "$cmd:"; which $cmd 2>/dev/null || echo "no encontrado"; done',
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: 'for cmd in adb rish pm; do printf "%-10s" "$cmd:"; which $cmd 2>/dev/null || echo "no encontrado"; done',
+        requires: [],
+        status: 'verified',
+      },
+    ],
+  },
+
+  // ── Safe Reboot ───────────────────────────────────────────
+  {
+    id: 'safe-reboot',
+    triggers: ['cpu-status', 'ram-status', 'temperature-status'],
+    name: 'Reiniciar el dispositivo (último recurso)',
+    instructions: [
+      {
+        platform: 'windows',
+        ui_path: 'Inicio → Apagar → Reiniciar',
+        command: null,
+        requires: [],
+        status: 'verified',
+      },
+      {
+        platform: 'linux',
+        ui_path: null,
+        command: 'echo "Reiniciando en 10 segundos... (Ctrl+C para cancelar)" && sleep 10 && sudo reboot',
+        requires: ['root'],
+        status: 'partial',
+      },
+      {
+        platform: 'android-termux',
+        ui_path: null,
+        command: 'adb reboot',
+        requires: ['adb'],
+        status: 'verified',
+      },
+    ],
+  },
 ];
 
 // ─── Registry API ──────────────────────────────────────────
