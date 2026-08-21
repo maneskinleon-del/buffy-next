@@ -1,12 +1,10 @@
-// Buffy Next — Action Mapper (v0.7)
+// Buffy Next — Action Mapper (v0.8)
 // Pure function: diagnostic results + platform → RecommendedAction[]
 //
-// Design constraints:
-// - Pure function, no filesystem, no model, no network, no state
-// - Deterministic: same input → same output
-// - Called AFTER diagnosis, never replaces it
-// - D5: hardcoded instructions, no LLM
-// - D6: confidence affects output behavior
+// v0.8 changes from v0.7:
+// - Eligibility filter: minSeverity, matchMode, minMatches
+// - Family grouping: investigate > mitigate > inform > maintenance > escalate
+// - Conflict resolution: 1 per family, max 3 actions total
 
 import type {
   CheckResult,
@@ -15,59 +13,90 @@ import type {
   Confidence,
   PlatformInstructions,
 } from './types.js';
-import { findActionsForChecks } from './action-registry.js';
+import { findActionsForChecks, type ActionFamily } from './action-registry.js';
+
+// ─── Conflict Resolution ──────────────────────────────────
+
+const FAMILY_PRIORITY: Record<ActionFamily, number> = {
+  investigate: 1,
+  mitigate: 2,
+  inform: 3,
+  maintenance: 4,
+  escalate: 5,
+};
+
+const MAX_ACTIONS = 3;
+
+interface EligibleAction {
+  entry: { id: string; name: string; family: ActionFamily; triggers: string[] };
+  checkResults: CheckResult[];
+}
+
+function groupByFamily(eligible: EligibleAction[]): Map<ActionFamily, EligibleAction[]> {
+  const groups = new Map<ActionFamily, EligibleAction[]>();
+  for (const e of eligible) {
+    const family = e.entry.family;
+    if (!groups.has(family)) groups.set(family, []);
+    groups.get(family)!.push(e);
+  }
+  return groups;
+}
+
+function resolveConflicts(eligible: EligibleAction[]): EligibleAction[] {
+  const groups = groupByFamily(eligible);
+  const result: EligibleAction[] = [];
+
+  const sortedFamilies = Array.from(groups.entries()).sort(
+    ([a], [b]) => FAMILY_PRIORITY[a] - FAMILY_PRIORITY[b],
+  );
+
+  for (const [, actions] of sortedFamilies) {
+    // Prefer: most matching checks first, then fewer triggers (= more specific)
+    const sorted = [...actions].sort((a, b) => {
+      const checkDiff = b.checkResults.length - a.checkResults.length;
+      if (checkDiff !== 0) return checkDiff;
+      return a.entry.triggers.length - b.entry.triggers.length;
+    });
+    result.push(sorted[0]);
+    if (result.length >= MAX_ACTIONS) break;
+  }
+
+  return result;
+}
 
 // ─── Confidence evaluation ─────────────────────────────────
 
-/**
- * Evaluates confidence for a recommended action.
- *
- * Confidence is NOT just metadata — it controls output:
- * - high:   "Haz esto"
- * - medium: "Puedes probar esto"
- * - low:    "Podría estar relacionado"
- * - (none via InstructionStatus.unsupported: "No tengo instrucciones")
- */
 function evaluateConfidence(
-  checkResults: CheckResult[],
-  actionId: string,
+  _checkResults: CheckResult[],
+  _actionId: string,
   instructions: PlatformInstructions[],
 ): Confidence {
-  // If any instruction is verified for the current platform, confidence is high
   const hasVerified = instructions.some(i => i.status === 'verified');
   if (hasVerified) return 'high';
-
-  // If all instructions are partial, confidence is medium
   const hasPartial = instructions.some(i => i.status === 'partial');
   if (hasPartial) return 'medium';
-
-  // If all are unsupported, confidence is low
   return 'low';
 }
 
 // ─── Action Mapper ─────────────────────────────────────────
 
-/**
- * Maps diagnostic results to recommended actions.
- *
- * @param checkResults - Results from diagnosis (v0.5-B/v0.6)
- * @param platform - Current platform
- * @returns Array of recommended actions with grounding chain
- */
 export function mapActions(
   checkResults: CheckResult[],
   platform: PlatformName,
 ): RecommendedAction[] {
-  // Find matching actions from registry
-  const actions = findActionsForChecks(checkResults);
+  const eligible = findActionsForChecks(checkResults);
 
-  return actions.map(action => {
-    // Filter instructions for current platform
+  const eligibleWithChecks: EligibleAction[] = eligible.map(entry => ({
+    entry,
+    checkResults: checkResults.filter(c => entry.triggers.includes(c.id)),
+  }));
+  const resolved = resolveConflicts(eligibleWithChecks);
+
+  return resolved.map(({ entry: action }) => {
     const platformInstructions = action.instructions.filter(
       i => i.platform === platform,
     );
 
-    // If no instructions for this platform, mark all as unsupported
     const instructions = platformInstructions.length > 0
       ? platformInstructions
       : action.instructions.map(i => ({
@@ -75,7 +104,6 @@ export function mapActions(
           status: 'unsupported' as const,
         }));
 
-    // Build observed/inferred/recommended chain
     const relevantChecks = checkResults.filter(
       c => action.triggers.includes(c.id),
     );

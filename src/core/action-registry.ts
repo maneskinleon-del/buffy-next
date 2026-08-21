@@ -9,6 +9,19 @@ import type { PlatformName, PlatformInstructions, RecommendedAction, Confidence,
 
 // ─── Action Catalog ────────────────────────────────────────
 
+/** Action family for conflict resolution */
+export type ActionFamily = 'investigate' | 'mitigate' | 'inform' | 'maintenance' | 'escalate';
+
+/** Eligibility conditions beyond simple trigger match */
+export interface ActionEligibility {
+  /** Minimum severity required (if omitted, any severity matches) */
+  minSeverity?: 'ok' | 'warning' | 'error' | 'unknown';
+  /** Requires ALL triggers to match, or just ANY */
+  matchMode: 'any' | 'all';
+  /** Minimum number of matching triggers (for matchMode='all') */
+  minMatches?: number;
+}
+
 interface ActionEntry {
   id: string;
   /** Which check results trigger this action */
@@ -17,6 +30,10 @@ interface ActionEntry {
   name: string;
   /** Platform-specific instructions */
   instructions: PlatformInstructions[];
+  /** Action family for conflict resolution */
+  family: ActionFamily;
+  /** Eligibility conditions */
+  eligibility: ActionEligibility;
 }
 
 const ACTION_CATALOG: ActionEntry[] = [
@@ -25,6 +42,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'close-heavy-processes',
     triggers: ['heavy-processes', 'cpu-status'],
     name: 'Cerrar procesos que consumen muchos recursos',
+    family: 'mitigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -55,6 +74,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'clear-memory',
     triggers: ['ram-status'],
     name: 'Liberar memoria RAM',
+    family: 'mitigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -85,6 +106,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'check-thermal',
     triggers: ['temperature-status'],
     name: 'Revisar temperatura y ventilación',
+    family: 'investigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -115,6 +138,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'free-disk-space',
     triggers: ['storage-/'],
     name: 'Liberar espacio en disco',
+    family: 'maintenance',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -145,6 +170,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'install-gpu-driver',
     triggers: ['gpu-generic-driver'],
     name: 'Instalar driver de GPU oficial',
+    family: 'mitigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -175,6 +202,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'restart-network',
     triggers: ['network-status'],
     name: 'Reiniciar conexión de red',
+    family: 'mitigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -205,6 +234,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'close-chrome-tabs',
     triggers: ['heavy-processes'],
     name: 'Cerrar pestañas innecesarias de Chrome',
+    family: 'mitigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -235,6 +266,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'inspect-processes',
     triggers: ['heavy-processes', 'cpu-status', 'ram-status'],
     name: 'Inspeccionar procesos en detalle',
+    family: 'investigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -265,6 +298,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'check-startup',
     triggers: ['cpu-status', 'ram-status'],
     name: 'Revisar programas de inicio',
+    family: 'investigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -293,8 +328,10 @@ const ACTION_CATALOG: ActionEntry[] = [
   // ── App Cache (Android) ───────────────────────────────────
   {
     id: 'clear-app-cache',
-    triggers: ['storage-/data'],
+    triggers: ['storage-/data', 'storage-/'],
     name: 'Limpiar caché de aplicaciones',
+    family: 'maintenance',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -325,6 +362,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'inspect-storage-detail',
     triggers: ['storage-/'],
     name: 'Detalle de uso de espacio en disco',
+    family: 'investigate',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -355,6 +394,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'restart-service',
     triggers: ['network-status'],
     name: 'Reiniciar servicio del sistema',
+    family: 'mitigate',
+    eligibility: { minSeverity: 'error', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -385,6 +426,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'check-permissions',
     triggers: ['permissions-status', 'tools-status'],
     name: 'Verificar permisos del sistema',
+    family: 'inform',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -415,6 +458,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'check-tools-availability',
     triggers: ['tools-status'],
     name: 'Verificar herramientas instaladas',
+    family: 'inform',
+    eligibility: { minSeverity: 'warning', matchMode: 'any' },
     instructions: [
       {
         platform: 'windows',
@@ -445,6 +490,8 @@ const ACTION_CATALOG: ActionEntry[] = [
     id: 'safe-reboot',
     triggers: ['cpu-status', 'ram-status', 'temperature-status'],
     name: 'Reiniciar el dispositivo (último recurso)',
+    family: 'escalate',
+    eligibility: { minSeverity: 'error', matchMode: 'all', minMatches: 2 },
     instructions: [
       {
         platform: 'windows',
@@ -479,18 +526,43 @@ const ACTION_CATALOG: ActionEntry[] = [
  * @param checkResults - Results from diagnosis
  * @returns Matching action entries
  */
-export function findActionsForChecks(checkResults: CheckResult[]): ActionEntry[] {
-  const triggeredIds = new Set<string>();
+const SEVERITY_ORDER = ['ok', 'warning', 'error', 'unknown'] as const;
 
-  for (const result of checkResults) {
-    for (const entry of ACTION_CATALOG) {
-      if (entry.triggers.includes(result.id)) {
-        triggeredIds.add(entry.id);
-      }
-    }
+function severityMeetsMinimum(actual: string, minimum: string): boolean {
+  const aIdx = SEVERITY_ORDER.indexOf(actual as typeof SEVERITY_ORDER[number]);
+  const mIdx = SEVERITY_ORDER.indexOf(minimum as typeof SEVERITY_ORDER[number]);
+  if (aIdx === -1 || mIdx === -1) return false;
+  return aIdx >= mIdx;
+}
+
+function checkEligibility(
+  entry: ActionEntry,
+  checkResults: CheckResult[],
+): boolean {
+  const { triggers, eligibility } = entry;
+  const matchedChecks = checkResults.filter(c => triggers.includes(c.id));
+
+  if (matchedChecks.length === 0) return false;
+
+  // Check minSeverity
+  if (eligibility.minSeverity) {
+    const hasRequiredSeverity = matchedChecks.some(
+      c => severityMeetsMinimum(c.severity, eligibility.minSeverity!),
+    );
+    if (!hasRequiredSeverity) return false;
   }
 
-  return ACTION_CATALOG.filter(e => triggeredIds.has(e.id));
+  // Check matchMode
+  if (eligibility.matchMode === 'all') {
+    const requiredMatches = eligibility.minMatches ?? triggers.length;
+    if (matchedChecks.length < requiredMatches) return false;
+  }
+
+  return true;
+}
+
+export function findActionsForChecks(checkResults: CheckResult[]): ActionEntry[] {
+  return ACTION_CATALOG.filter(entry => checkEligibility(entry, checkResults));
 }
 
 /**
