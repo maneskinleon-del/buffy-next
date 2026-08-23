@@ -1,20 +1,16 @@
 // Buffy Next — Windows Adapter
 // Uses PowerShell + WMI for system detection
 
-import { execSync, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import type {
   PlatformAdapter,
   PlatformInfo,
   SystemInfo,
   Capability,
-  ActionDefinition,
-  ActionResult,
 } from '../core/types.js';
 
 function ps(command: string): string {
   try {
-    // Use execFileSync to avoid cmd.exe shell interpretation
-    // which can break pipes (|) inside PowerShell commands
     return execFileSync(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-Command', command],
@@ -30,8 +26,6 @@ function psJson<T>(command: string): T | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    // ConvertTo-Json with single object returns {} not [{}]
-    // Normalize to array for consistency with WmiVideoController[] etc.
     return (Array.isArray(parsed) ? parsed : [parsed]) as T;
   } catch {
     return null;
@@ -151,7 +145,6 @@ export class WindowsAdapter implements PlatformAdapter {
       };
     });
 
-    // WMI returns tenths of Kelvin — explicit null check (0 is not absence)
     const rawTemp = temps?.CurrentTemperature;
     const cpuCelsius = rawTemp != null
       ? Math.round((rawTemp / 10) - 273.15)
@@ -160,7 +153,7 @@ export class WindowsAdapter implements PlatformAdapter {
     const processes = (procs ?? []).map((p) => ({
       pid: p.ProcessId ?? 0,
       name: p.Name ?? 'unknown',
-      cpuPercent: 0, // WMI doesn't provide real-time CPU% easily
+      cpuPercent: 0,
       memoryMB: Math.round((p.WorkingSetSize ?? 0) / 1048576),
     }));
 
@@ -206,9 +199,5 @@ export class WindowsAdapter implements PlatformAdapter {
         };
       }),
     );
-  }
-
-  async execute(action: ActionDefinition): Promise<ActionResult> {
-    return action.execute();
   }
 }

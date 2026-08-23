@@ -7,8 +7,6 @@ import type {
   PlatformInfo,
   SystemInfo,
   Capability,
-  ActionDefinition,
-  ActionResult,
   PlatformCapabilities,
 } from '../core/types.js';
 
@@ -24,28 +22,8 @@ function sh(command: string, extraEnv?: Record<string, string>): string {
   }
 }
 
-function shJson<T>(command: string): T | null {
-  const raw = sh(command);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
 function adbShell(command: string): string {
   return sh(`adb shell "${command}" 2>/dev/null`);
-}
-
-function adbShellJson<T>(command: string): T | null {
-  const raw = adbShell(command);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
 }
 
 // Generic GPU patterns for Android (Mali, Adreno, PowerVR, etc.)
@@ -65,7 +43,6 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     const shell = !!sh('id 2>/dev/null');
 
     // Shizuku: check if rish binary is available and Shizuku service responds
-    // rish requires RISH_APPLICATION_ID (Termux package name) to authenticate
     const rishPath = sh('command -v rish 2>/dev/null');
     let shizuku = false;
     if (rishPath) {
@@ -87,7 +64,6 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     let adb = false;
     if (adbPath) {
       const devices = sh('adb devices 2>/dev/null');
-      // Match actual device lines: "<serial>\tdevice" (not the header)
       adb = /^\S+\tdevice$/m.test(devices);
     }
 
@@ -116,7 +92,6 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     // Memory from /proc/meminfo
     const memRaw = sh('cat /proc/meminfo 2>/dev/null');
     const totalKB = parseInt(memRaw.match(/^MemTotal:\s+(\d+)/m)?.[1] ?? '0', 10);
-    // MemAvailable may not exist on older kernels; fall back to MemFree
     let availKB = parseInt(memRaw.match(/^MemAvailable:\s+(\d+)/m)?.[1] ?? '0', 10);
     if (!availKB) {
       availKB = parseInt(memRaw.match(/^MemFree:\s+(\d+)/m)?.[1] ?? '0', 10);
@@ -124,9 +99,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     const totalGB = Math.round((totalKB / 1048576) * 10) / 10;
     const availableGB = Math.round((availKB / 1048576) * 10) / 10;
 
-    // GPU — try multiple sources: ADB dumpsys, getprop, or local GL renderer
-    // Pattern anchored to lines starting with 'GLES:' to avoid matching
-    // unrelated strings like SingleSuppressCallback that contain 'GLES' as substring
+    // GPU — try multiple sources
     const gpuRaw = adbShell('dumpsys SurfaceFlinger 2>/dev/null | grep -i "^ *GLES:" | head -1');
     const gpuName = gpuRaw.replace(/^\s*GLES:\s*/, '')
       || sh('getprop ro.hardware.egl')
@@ -140,40 +113,35 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length / 1000)
       : 0;
 
-    // Storage — df /data outputs 1K-blocks (df -BM may not work on Termux)
+    // Storage
     let storageTotalKB = 0;
     let storageUsedKB = 0;
     let storageFreeKB = 0;
-    // Primary: df /data (1K-blocks)
     const dfRaw = sh('df /data 2>/dev/null | tail -1');
     const dfParts = dfRaw.split(/\s+/).filter(Boolean);
     if (dfParts.length >= 4) {
-      // Columns: Filesystem 1K-blocks Used Available Use% Mounted
       storageTotalKB = parseInt(dfParts[1] ?? '', 10) || 0;
       storageUsedKB = parseInt(dfParts[2] ?? '', 10) || 0;
       storageFreeKB = parseInt(dfParts[3] ?? '', 10) || 0;
     }
-    // Fallback: stat -f /data (Blocks: Total: N Free: N Available: N)
     if (!storageTotalKB) {
       const statRaw = sh('stat -f /data 2>/dev/null');
       const totalBlocks = parseInt(statRaw.match(/Total:\s+(\d+)/)?.[1] ?? '', 10) || 0;
       const freeBlocks = parseInt(statRaw.match(/Free:\s+(\d+)/)?.[1] ?? '', 10) || 0;
       if (totalBlocks) {
-        storageTotalKB = totalBlocks * 4; // 4KB block size
+        storageTotalKB = totalBlocks * 4;
         storageFreeKB = freeBlocks * 4;
         storageUsedKB = storageTotalKB - storageFreeKB;
       }
     }
 
-    // Processes — Termux `ps -A` columns: PID TTY TIME CMD (no RSS/CPU)
+    // Processes
     const psRaw = sh('ps -A 2>/dev/null | head -20');
     const psLines = psRaw.split('\n').filter(Boolean);
     const processes = psLines.map((line) => {
       const parts = line.trim().split(/\s+/);
       const pid = parseInt(parts[0] ?? '', 10);
-      if (isNaN(pid) || pid === 0) return null; // skip header or invalid
-      // ps -A columns: PID TTY TIME CMD
-      // No RSS in default ps; read from /proc/[pid]/status
+      if (isNaN(pid) || pid === 0) return null;
       let rssMB = 0;
       try {
         const status = sh(`cat /proc/${pid}/status 2>/dev/null | grep VmRSS`);
@@ -183,7 +151,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       return {
         pid,
         name: parts[parts.length - 1] ?? 'unknown',
-        cpuPercent: 0, // not available in default ps
+        cpuPercent: 0,
         memoryMB: rssMB,
       };
     }).filter((p): p is NonNullable<typeof p> => p !== null);
@@ -244,9 +212,5 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
         };
       }),
     );
-  }
-
-  async execute(action: ActionDefinition): Promise<ActionResult> {
-    return action.execute();
   }
 }

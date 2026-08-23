@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildExecutionPlan, executeAction } from '../src/core/executor.js';
+import { buildExecutionPlan } from '../src/core/executor.js';
 import type { ActionDefinition, Capability } from '../src/core/types.js';
 
 const autoSafeAction: ActionDefinition = {
@@ -10,7 +10,6 @@ const autoSafeAction: ActionDefinition = {
   reversible: false,
   platforms: ['windows', 'android-termux'],
   prerequisites: [],
-  async execute() { return { success: true, message: 'ok' }; },
 };
 
 const confirmAction: ActionDefinition = {
@@ -21,7 +20,6 @@ const confirmAction: ActionDefinition = {
   reversible: true,
   platforms: ['windows'],
   prerequisites: [],
-  async execute() { return { success: true, message: 'ok' }; },
 };
 
 const forbiddenAction: ActionDefinition = {
@@ -32,7 +30,6 @@ const forbiddenAction: ActionDefinition = {
   reversible: false,
   platforms: ['windows'],
   prerequisites: [],
-  async execute() { return { success: true, message: 'ok' }; },
 };
 
 const actionWithPrereqs: ActionDefinition = {
@@ -43,43 +40,6 @@ const actionWithPrereqs: ActionDefinition = {
   reversible: false,
   platforms: ['windows'],
   prerequisites: ['Node.js', 'winget'],
-  async execute() { return { success: true, message: 'ok' }; },
-};
-
-const actionWithDryRun: ActionDefinition = {
-  id: 'test-dryrun',
-  name: 'Test DryRun',
-  description: 'Test',
-  level: 'auto_safe',
-  reversible: false,
-  platforms: ['windows', 'android-termux'],
-  prerequisites: [],
-  async execute() { return { success: true, message: 'ok' }; },
-  async dryRun() { return 'powercfg /setactive test'; },
-};
-
-const actionWithVerify: ActionDefinition = {
-  id: 'test-verify',
-  name: 'Test Verify',
-  description: 'Test',
-  level: 'auto_safe',
-  reversible: false,
-  platforms: ['windows', 'android-termux'],
-  prerequisites: [],
-  async execute() { return { success: true, message: 'executed' }; },
-  async verify() { return true; },
-};
-
-const actionVerifyFails: ActionDefinition = {
-  id: 'test-verify-fail',
-  name: 'Test Verify Fail',
-  description: 'Test',
-  level: 'auto_safe',
-  reversible: false,
-  platforms: ['windows', 'android-termux'],
-  prerequisites: [],
-  async execute() { return { success: true, message: 'executed' }; },
-  async verify() { return false; },
 };
 
 const installedCaps: Capability[] = [
@@ -142,46 +102,9 @@ describe('Executor', () => {
       expect(plan.prerequisitesValid).toBe(true);
     });
 
-    it('should run dryRun when provided', async () => {
-      const plan = await buildExecutionPlan(actionWithDryRun, 'windows', emptyCaps);
-      expect(plan.dryRunResult).toBe('powercfg /setactive test');
-    });
-
     it('should default capabilities to empty array', async () => {
       const plan = await buildExecutionPlan(autoSafeAction, 'windows');
       expect(plan.prerequisitesValid).toBe(true);
-    });
-  });
-
-  describe('executeAction', () => {
-
-    it('should execute successfully', async () => {
-      const result = await executeAction(autoSafeAction);
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('ok');
-    });
-
-    it('should run verify after execute', async () => {
-      const result = await executeAction(actionWithVerify);
-      expect(result.success).toBe(true);
-      expect(result.message).toBe('executed');
-    });
-
-    it('should fail when verify returns false', async () => {
-      const result = await executeAction(actionVerifyFails);
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('verificación falló');
-    });
-
-    it('should handle execute errors gracefully', async () => {
-      const failingAction: ActionDefinition = {
-        ...autoSafeAction,
-        id: 'test-fail',
-        async execute() { throw new Error('boom'); },
-      };
-      const result = await executeAction(failingAction);
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('boom');
     });
   });
 });

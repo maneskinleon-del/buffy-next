@@ -1,5 +1,6 @@
-// Buffy Next — CLI Entry Point
-// Dispatches commands to the appropriate modules
+// Buffy Next — CLI Entry Point (v2.2)
+// Dispatches commands to the appropriate modules.
+// Uses ActionGate for all action execution.
 
 import { createAdapter } from './adapters/index.js';
 import { runDoctor } from './core/doctor.js';
@@ -7,7 +8,6 @@ import { diagnose } from './core/diagnose.js';
 import { buildContext } from './core/context.js';
 import { findActionById } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
-import { setInstallTarget } from './actions/catalog/install-tool.js';
 import {
   renderGreeting,
   renderDoctorReport,
@@ -117,7 +117,6 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
   }
 
   // SECURITY: diagnose = observe + recommend. NEVER executes actions.
-  // Execution is exclusively via cmdAct → executeWithGates.
   const response = await diagnose(adapter, query);
 
   if (jsonMode) {
@@ -128,16 +127,11 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
   console.log(renderDiagnosticResponse(response));
 }
 
-async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, actionId: string | undefined, extraArg?: string) {
+async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, actionId: string | undefined, rawParams?: string) {
   if (!actionId) {
     console.error('Uso: buffy act <action-id> [args]');
     console.error('Ejemplo: buffy act install-tool node');
     process.exit(1);
-  }
-
-  // Actions that accept extra arguments
-  if (actionId === 'install-tool' && extraArg) {
-    setInstallTarget(extraArg);
   }
 
   const action = findActionById(actionId);
@@ -147,6 +141,7 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
     process.exit(1);
   }
 
+  // Pass rawParams directly — no setInstallTarget
   await executeWithGates({ adapter, action, jsonMode, promptUser });
 }
 
@@ -167,8 +162,6 @@ async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {
   console.log(`  ✅ Estado inicial guardado`);
   console.log('\nUsa: buffy doctor para ver el estado de tu sistema.\n');
 }
-
-
 
 // ─── Helpers ────────────────────────────────────────────────
 

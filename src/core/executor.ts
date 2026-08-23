@@ -1,7 +1,12 @@
-// Buffy Next — Executor
-// Executes actions with authorization, verification, and reporting
+// Buffy Next — Executor (v2.2)
+// buildExecutionPlan() — internal validation utility
+//
+// SECURITY: executeAction() has been REMOVED.
+// Physical execution is exclusively via ActionGate → private executor registry.
+// There is no public function that directly calls action.execute().
+// (ActionDefinition no longer has execute.)
 
-import type { ActionDefinition, ActionResult, Capability, PlatformCapabilities } from './types.js';
+import type { ActionDefinition, Capability, PlatformCapabilities } from './types.js';
 import { classifyAction, validateAction, checkPrerequisites } from './security.js';
 
 export interface ExecutionPlan {
@@ -10,29 +15,23 @@ export interface ExecutionPlan {
   levelValid: boolean;
   prerequisitesValid: boolean;
   missingPrerequisites: string[];
-  dryRunResult?: string;
   requiresAuth: boolean;
 }
 
 /**
- * Build execution plan for an action (validates everything before executing)
+ * Build execution plan for an action (validates everything before executing).
+ * Internal utility — used by ActionGate and tests.
  */
 export async function buildExecutionPlan(
   action: ActionDefinition,
   platform: string,
   capabilities: Capability[] = [],
   privileges?: PlatformCapabilities,
-  dryRun: boolean = true,
 ): Promise<ExecutionPlan> {
   const validation = validateAction(action, platform);
   const prereqCheck = checkPrerequisites(action, capabilities, privileges);
   const level = classifyAction(action);
   const requiresAuth = level === 'confirm';
-
-  let dryRunResult: string | undefined;
-  if (dryRun && action.dryRun) {
-    dryRunResult = await action.dryRun();
-  }
 
   return {
     action,
@@ -40,35 +39,6 @@ export async function buildExecutionPlan(
     levelValid: level !== 'forbidden',
     prerequisitesValid: prereqCheck.valid,
     missingPrerequisites: prereqCheck.missing,
-    dryRunResult,
     requiresAuth,
   };
-}
-
-/**
- * Execute an action (after authorization)
- */
-export async function executeAction(action: ActionDefinition): Promise<ActionResult> {
-  try {
-    const result = await action.execute();
-
-    // Verify if verify function exists
-    if (action.verify) {
-      const verified = await action.verify();
-      if (!verified) {
-        return {
-          success: false,
-          message: `Acción ejecutada pero la verificación falló: ${action.name}`,
-          details: { ...result.details, verified: false },
-        };
-      }
-    }
-
-    return result;
-  } catch (error) {
-    return {
-      success: false,
-      message: `Error ejecutando ${action.name}: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
 }

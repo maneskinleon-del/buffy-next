@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PlatformAdapter, ActionDefinition, Capability } from '../src/core/types.js';
+import type { PlatformAdapter, ActionDefinition, ActionResult, Capability, ActionExecutor } from '../src/core/types.js';
 
 // Mock modules before importing pipeline
 vi.mock('../src/state/store.js', () => ({
@@ -20,9 +20,8 @@ vi.mock('../src/core/presenter.js', () => ({
 
 import { executeWithGates } from '../src/core/pipeline.js';
 import { loadState, updateState } from '../src/state/store.js';
-import { renderActionResult } from '../src/core/presenter.js';
 
-// ─── Mock Adapter ───────────────────────────────────────────
+// ─── Mock Adapter (no execute — detection only) ───────────
 
 function createMockAdapter(caps: Capability[] = []): PlatformAdapter {
   return {
@@ -38,11 +37,10 @@ function createMockAdapter(caps: Capability[] = []): PlatformAdapter {
       processes: [],
     }),
     capabilities: async () => caps,
-    execute: async (action: ActionDefinition) => action.execute(),
   };
 }
 
-// ─── Test Actions ───────────────────────────────────────────
+// ─── Test Actions (metadata only) ──────────────────────────
 
 const autoSafeAction: ActionDefinition = {
   id: 'test-auto',
@@ -52,7 +50,6 @@ const autoSafeAction: ActionDefinition = {
   reversible: false,
   platforms: ['windows', 'android-termux'],
   prerequisites: [],
-  async execute() { return { success: true, message: 'auto executed' }; },
 };
 
 const confirmAction: ActionDefinition = {
@@ -63,7 +60,6 @@ const confirmAction: ActionDefinition = {
   reversible: true,
   platforms: ['windows', 'android-termux'],
   prerequisites: [],
-  async execute() { return { success: true, message: 'confirmed and executed' }; },
 };
 
 const forbiddenAction: ActionDefinition = {
@@ -74,7 +70,6 @@ const forbiddenAction: ActionDefinition = {
   reversible: false,
   platforms: ['windows', 'android-termux'],
   prerequisites: [],
-  async execute() { return { success: true, message: 'should not run' }; },
 };
 
 const actionWithPrereqs: ActionDefinition = {
@@ -85,31 +80,16 @@ const actionWithPrereqs: ActionDefinition = {
   reversible: false,
   platforms: ['windows', 'android-termux'],
   prerequisites: ['Node.js'],
-  async execute() { return { success: true, message: 'prereq ok' }; },
 };
 
-const actionWithDryRun: ActionDefinition = {
-  id: 'test-dryrun',
-  name: 'Test DryRun',
-  description: 'Action with dry run',
-  level: 'auto_safe',
-  reversible: false,
-  platforms: ['windows', 'android-termux'],
-  prerequisites: [],
-  async execute() { return { success: true, message: 'dryrun executed' }; },
-  async dryRun() { return 'echo test-command'; },
-};
+// Test actions and their executors
+const TEST_ACTIONS: ActionDefinition[] = [autoSafeAction, confirmAction, forbiddenAction, actionWithPrereqs];
 
-const actionWithVerify: ActionDefinition = {
-  id: 'test-verify',
-  name: 'Test Verify',
-  description: 'Action with verify',
-  level: 'auto_safe',
-  reversible: false,
-  platforms: ['windows', 'android-termux'],
-  prerequisites: [],
-  async execute() { return { success: true, message: 'verified' }; },
-  async verify() { return true; },
+const TEST_EXECUTOR_MAP: Record<string, ActionExecutor> = {
+  'test-auto': async () => ({ success: true, message: 'auto executed' }),
+  'test-confirm': async () => ({ success: true, message: 'confirmed and executed' }),
+  'test-forbidden': async () => ({ success: true, message: 'should not run' }),
+  'test-prereq': async () => ({ success: true, message: 'prereq ok' }),
 };
 
 // ─── Tests ──────────────────────────────────────────────────
@@ -123,46 +103,63 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   // --- Gate 1: Forbidden ---
 
   it('should block forbidden actions', async () => {
-    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const adapter = createMockAdapter();
 
-    await executeWithGates({ adapter, action: forbiddenAction });
+    const result = await executeWithGates({
+      adapter,
+      action: forbiddenAction,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    expect(logSpy).toHaveBeenCalledWith('Acción prohibida: Test Forbidden');
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('prohibida');
     expect(updateState).not.toHaveBeenCalled();
-    logSpy.mockRestore();
   });
 
   // --- Gate 2: Platform ---
 
   it('should block actions on wrong platform', async () => {
-    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const adapter = createMockAdapter();
     adapter.name = 'android-termux' as any;
 
     const windowsOnlyAction: ActionDefinition = {
-      ...autoSafeAction,
+      id: 'test-windows-only',
+      name: 'Windows Only',
+      description: 'Test',
+      level: 'auto_safe',
+      reversible: false,
       platforms: ['windows'],
+      prerequisites: [],
     };
 
-    await executeWithGates({ adapter, action: windowsOnlyAction });
+    const result = await executeWithGates({
+      adapter,
+      action: windowsOnlyAction,
+      actions: [windowsOnlyAction],
+      customExecutorMap: { 'test-windows-only': async () => ({ success: true, message: 'ok' }) },
+    });
 
-    expect(logSpy).toHaveBeenCalledWith('Acción no disponible en esta plataforma');
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('disponible');
     expect(updateState).not.toHaveBeenCalled();
-    logSpy.mockRestore();
   });
 
   // --- Gate 2: Prerequisites ---
 
   it('should block when prerequisites are missing', async () => {
-    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const adapter = createMockAdapter([]); // no capabilities
 
-    await executeWithGates({ adapter, action: actionWithPrereqs });
+    const result = await executeWithGates({
+      adapter,
+      action: actionWithPrereqs,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Prerequisito no satisfecho'));
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('faltante');
     expect(updateState).not.toHaveBeenCalled();
-    logSpy.mockRestore();
   });
 
   it('should proceed when prerequisites are met', async () => {
@@ -170,9 +167,14 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
       { name: 'Node.js', status: 'installed', version: '26.0.0' },
     ]);
 
-    await executeWithGates({ adapter, action: actionWithPrereqs });
+    const result = await executeWithGates({
+      adapter,
+      action: actionWithPrereqs,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    expect(renderActionResult).toHaveBeenCalled();
+    expect(result.success).toBe(true);
     expect(updateState).toHaveBeenCalled();
   });
 
@@ -182,46 +184,67 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('y');
 
-    await executeWithGates({ adapter, action: confirmAction, promptUser });
+    const result = await executeWithGates({
+      adapter,
+      action: confirmAction,
+      promptUser,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
     expect(promptUser).toHaveBeenCalled();
-    expect(renderActionResult).toHaveBeenCalled();
+    expect(result.success).toBe(true);
     expect(updateState).toHaveBeenCalled();
   });
 
   it('should cancel CONFIRM action on "n"', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('n');
 
-    await executeWithGates({ adapter, action: confirmAction, promptUser });
+    const result = await executeWithGates({
+      adapter,
+      action: confirmAction,
+      promptUser,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
     expect(promptUser).toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith('Acción cancelada.');
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('cancelada');
     expect(updateState).not.toHaveBeenCalled();
-    logSpy.mockRestore();
   });
 
   it('should cancel CONFIRM action on empty string', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('');
 
-    await executeWithGates({ adapter, action: confirmAction, promptUser });
+    const result = await executeWithGates({
+      adapter,
+      action: confirmAction,
+      promptUser,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
     expect(promptUser).toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith('Acción cancelada.');
+    expect(result.success).toBe(false);
     expect(updateState).not.toHaveBeenCalled();
-    logSpy.mockRestore();
   });
 
   it('should accept "si" (without accent) for CONFIRM authorization', async () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('si');
 
-    await executeWithGates({ adapter, action: confirmAction, promptUser });
+    const result = await executeWithGates({
+      adapter,
+      action: confirmAction,
+      promptUser,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    expect(renderActionResult).toHaveBeenCalled();
+    expect(result.success).toBe(true);
     expect(updateState).toHaveBeenCalled();
   });
 
@@ -229,9 +252,15 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('sí');
 
-    await executeWithGates({ adapter, action: confirmAction, promptUser });
+    const result = await executeWithGates({
+      adapter,
+      action: confirmAction,
+      promptUser,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    expect(renderActionResult).toHaveBeenCalled();
+    expect(result.success).toBe(true);
     expect(updateState).toHaveBeenCalled();
   });
 
@@ -241,38 +270,34 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn();
 
-    await executeWithGates({ adapter, action: autoSafeAction, promptUser });
+    const result = await executeWithGates({
+      adapter,
+      action: autoSafeAction,
+      promptUser,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
     expect(promptUser).not.toHaveBeenCalled();
-    expect(renderActionResult).toHaveBeenCalled();
+    expect(result.success).toBe(true);
     expect(updateState).toHaveBeenCalled();
-  });
-
-  // --- DryRun display ---
-
-  it('should display dryRun result before executing', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const adapter = createMockAdapter();
-
-    await executeWithGates({ adapter, action: actionWithDryRun });
-
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('📋'));
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('echo test-command'));
-    expect(renderActionResult).toHaveBeenCalled();
-    logSpy.mockRestore();
   });
 
   // --- JSON mode ---
 
-  it('should output JSON plan in jsonMode and skip execution', async () => {
+  it('should output JSON in jsonMode and skip execution', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const adapter = createMockAdapter();
 
-    await executeWithGates({ adapter, action: autoSafeAction, jsonMode: true });
+    await executeWithGates({
+      adapter,
+      action: autoSafeAction,
+      jsonMode: true,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    // Should output JSON but NOT execute
     expect(logSpy).toHaveBeenCalled();
-    expect(renderActionResult).not.toHaveBeenCalled();
     expect(updateState).not.toHaveBeenCalled();
     logSpy.mockRestore();
   });
@@ -282,7 +307,12 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   it('should persist action in state.json after execution', async () => {
     const adapter = createMockAdapter();
 
-    await executeWithGates({ adapter, action: autoSafeAction });
+    await executeWithGates({
+      adapter,
+      action: autoSafeAction,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
     expect(updateState).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -297,37 +327,36 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     );
   });
 
-  // --- Verify failure ---
-
-  it('should report verify failure in result', async () => {
-    const failVerifyAction: ActionDefinition = {
-      ...autoSafeAction,
-      id: 'test-verify-fail',
-      async execute() { return { success: true, message: 'executed' }; },
-      async verify() { return false; },
-    };
-
-    const adapter = createMockAdapter();
-
-    await executeWithGates({ adapter, action: failVerifyAction });
-
-    // executeAction handles verify failure — result should be passed to presenter
-    expect(renderActionResult).toHaveBeenCalled();
-    const callArg = (renderActionResult as any).mock.calls[0][0];
-    expect(callArg.success).toBe(false);
-    expect(callArg.message).toContain('verificación falló');
-  });
-
   // --- Missing promptUser for CONFIRM ---
 
   it('should error when CONFIRM action has no promptUser', async () => {
-    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const adapter = createMockAdapter();
 
-    await executeWithGates({ adapter, action: confirmAction });
+    const result = await executeWithGates({
+      adapter,
+      action: confirmAction,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
 
-    expect(logSpy).toHaveBeenCalledWith('Se requiere interacción del usuario pero no hay promptUser');
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('promptUser');
     expect(updateState).not.toHaveBeenCalled();
-    logSpy.mockRestore();
+  });
+
+  // --- Action not found ---
+
+  it('should return error for unknown action ID', async () => {
+    const adapter = createMockAdapter();
+
+    const result = await executeWithGates({
+      adapter,
+      action: { id: 'nonexistent', name: 'X', description: 'X', level: 'auto_safe', reversible: false, platforms: ['windows'], prerequisites: [] },
+      actions: [],
+      customExecutorMap: {},
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('no encontrada');
   });
 });

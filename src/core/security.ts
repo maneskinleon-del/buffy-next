@@ -41,10 +41,6 @@ export function buildAuthPrompt(action: ActionDefinition): string {
     lines.push(`   Requiere: ${action.prerequisites.join(', ')}`);
   }
 
-  if (action.dryRun) {
-    lines.push('', '   Dry-run:');
-  }
-
   return lines.join('\n');
 }
 

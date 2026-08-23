@@ -1,5 +1,6 @@
-// Buffy Next — Action Registry
-// Central catalog of all available actions
+// Buffy Next — Action Registry (v2.2)
+// Central catalog of all available actions (metadata only).
+// Physical executors are registered separately with ActionGate.
 
 import type { CheckResult, ActionDefinition } from '../core/types.js';
 import { checkDriverStatus } from './catalog/check-driver-status.js';

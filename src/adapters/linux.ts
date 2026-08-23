@@ -7,8 +7,6 @@ import type {
   PlatformInfo,
   SystemInfo,
   Capability,
-  ActionDefinition,
-  ActionResult,
   PlatformCapabilities,
 } from '../core/types.js';
 
@@ -217,7 +215,6 @@ export class LinuxAdapter implements PlatformAdapter {
     const storage = detectStorage();
     const temperature = detectTemperature();
     const processes = detectProcesses();
-    const shell = process.env.SHELL ?? null;
 
     // OS name from /etc/os-release
     const osRelease = sh('cat /etc/os-release 2>/dev/null');
@@ -303,9 +300,5 @@ export class LinuxAdapter implements PlatformAdapter {
         };
       }),
     );
-  }
-
-  async execute(action: ActionDefinition): Promise<ActionResult> {
-    return action.execute();
   }
 }

@@ -28,7 +28,7 @@ const FAMILY_PRIORITY: Record<ActionFamily, number> = {
 const MAX_ACTIONS = 3;
 
 interface EligibleAction {
-  entry: { id: string; name: string; family: ActionFamily; triggers: string[] };
+  entry: { id: string; name: string; family: ActionFamily; triggers: string[]; instructions: PlatformInstructions[] };
   checkResults: CheckResult[];
 }
 
