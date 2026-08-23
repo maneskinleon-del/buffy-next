@@ -9,6 +9,7 @@ import type {
   Capability,
   PlatformCapabilities,
 } from '../core/types.js';
+import { isKnownMobileGpu } from '../shared/gpu.js';
 
 function sh(command: string, extraEnv?: Record<string, string>): string {
   try {
@@ -26,12 +27,14 @@ function adbShell(command: string): string {
   return sh(`adb shell "${command}" 2>/dev/null`);
 }
 
-// Generic GPU patterns for Android (Mali, Adreno, PowerVR, etc.)
-const MOBILE_GPU_VENDORS = ['Mali', 'Adreno', 'PowerVR', 'Vivante', 'Qualcomm', 'ARM', 'Apple'];
-
-function isGenericGpu(name: string): boolean {
-  if (!name) return true;
-  return !MOBILE_GPU_VENDORS.some((v) => name.toLowerCase().includes(v.toLowerCase()));
+function adbShellJson<T>(command: string): T | null {
+  const raw = adbShell(command);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
 }
 
 export class AndroidTermuxAdapter implements PlatformAdapter {
@@ -111,7 +114,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     const temps = thermalRaw.split('\n').map(Number).filter((n) => n > 0);
     const avgTemp = temps.length > 0
       ? Math.round(temps.reduce((a, b) => a + b, 0) / temps.length / 1000)
-      : 0;
+      : null;
 
     // Storage
     let storageTotalKB = 0;
@@ -165,13 +168,13 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
         version: sh('getprop ro.build.display.id') || 'unknown',
         arch: sh('getprop ro.product.cpu.abi') || process.arch,
       },
-      cpu: { model: cpuModel, cores: cpuCores },
+      cpu: { model: cpuModel, cores: cpuCores, usage: null },
       memory: {
         totalGB,
         availableGB,
         usedPercent: totalGB > 0 ? Math.round(((totalGB - availableGB) / totalGB) * 100) : 0,
       },
-      gpu: { name: gpuName, driver: 'bundled', isGeneric: isGenericGpu(gpuName) },
+      gpu: { name: gpuName, driver: 'bundled', isGeneric: !isKnownMobileGpu(gpuName) },
       storage: [
         {
           mount: '/data',
@@ -180,7 +183,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
           usedPercent: storageTotalKB > 0 ? Math.round((storageUsedKB / storageTotalKB) * 100) : 0,
         },
       ],
-      temperature: { cpuCelsius: avgTemp },
+      temperature: avgTemp != null ? { cpuCelsius: avgTemp } : null,
       processes,
       privileges,
     };

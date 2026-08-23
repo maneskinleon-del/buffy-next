@@ -33,8 +33,8 @@ describe('Context Scorer (v0.6)', () => {
   it('should handle multi-fragment queries', () => {
     const lexical = selectChecks('wifi es lento y la temperatura sube');
     const scored = scoreContext('wifi es lento y la temperatura sube', lexical);
-    // Should have network (from wifi) + temperature checks
-    expect(scored.checks).toContain('network');
+    // Should have storage+processes (from wifi) + temperature checks
+    expect(scored.checks).toContain('storage');
     expect(scored.checks).toContain('temperature');
     expect(scored.checks).toContain('cpu');
     expect(scored.checks).toContain('processes');
@@ -67,10 +67,10 @@ describe('Context Scorer (v0.6)', () => {
     it('GC-3: "wifi es lento y la temperatura sube" → no ram/gpu over-selection', () => {
       const lexical = selectChecks('wifi es lento y la temperatura sube');
       const scored = scoreContext('wifi es lento y la temperatura sube', lexical);
-      // GC-3: "lento" should bind to wifi (network), not trigger generic performance
-      // Expected: network, os, temperature, cpu, processes (no ram, no gpu)
-      expect(scored.checks).toContain('network');
-      expect(scored.checks).toContain('os');
+      // GC-3: "lento" should bind to wifi (storage/processes), not trigger generic performance
+      // Expected: storage, processes, temperature, cpu (no ram, no gpu)
+      expect(scored.checks).toContain('storage');
+      expect(scored.checks).toContain('processes');
       expect(scored.checks).toContain('temperature');
       expect(scored.checks).toContain('cpu');
       expect(scored.checks).toContain('processes');

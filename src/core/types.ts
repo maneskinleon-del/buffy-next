@@ -16,9 +16,9 @@ export interface PlatformInfo {
 
 /** Sub-types for backward compatibility (old android-termux.ts, etc.) */
 export type OSInfo = { name: string; version: string; arch: string };
-export type CPUInfo = { model: string; cores: number; usage?: number };
-export type MemoryInfo = { totalGB: number; availableGB: number; usedPercent: number };
-export type GPUInfo = { name: string; driver: string; isGeneric: boolean };
+export type CPUInfo = { model: string; cores: number; usage: number | null };
+export type MemoryInfo = { totalGB: number | null; availableGB: number | null; usedPercent: number };
+export type GPUInfo = { name: string; driver: string; isGeneric: boolean | null };
 export type StorageInfo = { devices: StorageDevice[] };
 export type TempInfo = { cpuCelsius: number };
 
@@ -80,7 +80,30 @@ export type SecurityLevel = 'auto_safe' | 'confirm' | 'forbidden';
 /** Backward compat alias */
 export type ActionLevel = SecurityLevel;
 export type DiagnosticSeverity = CheckResult['severity'];
-export type CheckName = string;
+/**
+ * Closed set of check names — only checks with real implementations.
+ * Adding a new check requires updating this type AND buildObservations().
+ */
+export type CheckName =
+  | 'cpu'
+  | 'ram'
+  | 'gpu'
+  | 'temperature'
+  | 'processes'
+  | 'storage';
+
+/**
+ * Closed set of observation categories.
+ * Using a union type prevents typos (e.g. 'memroy') and makes
+ * CATEGORY_TO_ACTIONS exhaustive at compile time.
+ */
+export type ObservationCategory =
+  | 'cpu'
+  | 'memory'
+  | 'gpu'
+  | 'temperature'
+  | 'processes'
+  | 'storage';
 
 // ─── Actions (metadata only — no execute/dryRun/rollback/verify) ──
 
@@ -197,7 +220,38 @@ export interface CheckResult {
 /** Backward compat alias */
 export type DiagnosticItem = CheckResult;
 
-// ─── Context Scoring (v0.6) ──────────────────────────────
+// ─── Observation & Inference (remote v0.4.0) ─────────────
+
+/** A measured fact from the system — pure data, no interpretation */
+export interface Observation {
+  /** Human-readable fact string */
+  fact: string;
+  /** Numeric value if applicable */
+  value?: number;
+  /** Unit (%, °C, cores, GB, etc.) */
+  unit?: string;
+  /** Category — closed union, prevents typos and ensures exhaustive registry */
+  category: ObservationCategory;
+  /** Thresholds that were applied for classification */
+  threshold?: {
+    warning: number;
+    error: number;
+  };
+  /** Severity: ok = within range, warning = exceeded threshold, error = critical */
+  severity: 'ok' | 'warning' | 'error' | 'unknown';
+}
+
+/** An inference derived from observations — possible cause, not confirmed */
+export interface Inference {
+  /** Which observations this inference is based on */
+  basedOn: string[];
+  /** Human-readable inference statement */
+  statement: string;
+  /** Whether this is a possible cause (always true for MVP) */
+  possible: boolean;
+}
+
+// ─── Context Scoring (local v0.6) ─────────────────────────
 
 export type Confidence = 'high' | 'medium' | 'low';
 
@@ -219,7 +273,7 @@ export interface Observability {
   unsupportedChecks?: string[];
 }
 
-// ─── Action Grounding (v0.7) ──────────────────────────────
+// ─── Action Grounding (local v0.7) ────────────────────────
 
 export type InstructionStatus = 'verified' | 'partial' | 'unsupported';
 
@@ -243,7 +297,8 @@ export interface RecommendedAction {
 // ─── Diagnosis ─────────────────────────────────────────────
 
 export interface DiagnosticResult {
-  items: CheckResult[];
+  observations: Observation[];
+  inferences: Inference[];
   suggestedActions: SuggestedAction[];
 }
 

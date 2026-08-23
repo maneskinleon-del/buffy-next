@@ -24,7 +24,7 @@ const DEFAULT_DIAGNOSTIC_CHECKS: CheckName[] = [
  */
 const SPECIFIC_PATTERNS: Array<{ pattern: RegExp; checks: CheckName[] }> = [
   // Network
-  { pattern: /internet|red|wifi|conexi[oó]n|network|dns/i, checks: ['network', 'os'] },
+  { pattern: /internet|red|wifi|conexi[oó]n|network|dns/i, checks: ['storage', 'processes'] },
   // Storage
   { pattern: /disco|lleno|almacenamiento|space|espacio|almacen/i, checks: ['storage'] },
   // Temperature (specific — includes "ventilador", "ruge")
@@ -34,9 +34,9 @@ const SPECIFIC_PATTERNS: Array<{ pattern: RegExp; checks: CheckName[] }> = [
   // GPU
   { pattern: /gpu|tarjeta gr[aá]fica|video|driver|pantalla/i, checks: ['gpu'] },
   // Permissions
-  { pattern: /permiso|admin|root|acceso|privilegio/i, checks: ['permissions', 'tools'] },
+  { pattern: /permiso|admin|root|acceso|privilegio/i, checks: ['processes'] },
   // Tools
-  { pattern: /instalar|install/i, checks: ['tools', 'gpu'] },
+  { pattern: /instalar|install/i, checks: ['gpu'] },
   // Processes
   { pattern: /proceso|procesos|app|aplicaci[oó]n|servicio|virus|malware/i, checks: ['processes'] },
 ];

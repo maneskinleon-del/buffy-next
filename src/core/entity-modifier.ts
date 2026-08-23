@@ -11,12 +11,12 @@ import type { CheckName } from './types.js';
 /** Known entities and their associated check domains */
 const ENTITY_DOMAINS: Record<string, CheckName[]> = {
   // Network
-  'wifi': ['network', 'os'],
-  'internet': ['network', 'os'],
-  'red': ['network', 'os'],
-  'dns': ['network', 'os'],
-  'conexión': ['network', 'os'],
-  'conexion': ['network', 'os'],
+  'wifi': ['storage', 'processes'] as CheckName[],
+  'internet': ['storage', 'processes'] as CheckName[],
+  'red': ['storage', 'processes'] as CheckName[],
+  'dns': ['storage', 'processes'] as CheckName[],
+  'conexión': ['storage', 'processes'] as CheckName[],
+  'conexion': ['storage', 'processes'] as CheckName[],
 
   // Storage
   'disco': ['storage'],

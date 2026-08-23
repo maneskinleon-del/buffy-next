@@ -45,6 +45,11 @@ export function buildContext(report: DoctorReport): BuffyContext {
         used_percent: d.usedPercent,
       })),
       temperature_c: report.system.temperature?.cpuCelsius ?? null,
+      process_groups: report.system.processGroups?.map(g => ({
+        name: g.name,
+        count: g.processCount,
+        total_memory_mb: g.totalMemoryMB,
+      })) ?? undefined,
     },
 
     environment: {

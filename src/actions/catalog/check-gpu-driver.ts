@@ -3,6 +3,7 @@
 
 import type { ActionDefinition } from '../../core/types.js';
 
+
 export const checkGpuDriver: ActionDefinition = {
   id: 'check-gpu-driver',
   name: 'Verificar driver de GPU',

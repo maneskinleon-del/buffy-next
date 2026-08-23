@@ -10,7 +10,7 @@ import type { PlatformAdapter, SystemInfo, PlatformInfo, Capability, ActionDefin
 function createMockAdapter(overrides: Partial<SystemInfo> = {}): PlatformAdapter {
   const defaultSystem: SystemInfo = {
     os: { name: 'Test OS', version: '1.0', arch: 'x64' },
-    cpu: { model: 'Test CPU', cores: 4 },
+    cpu: { model: 'Test CPU', cores: 4, usage: null },
     memory: { totalGB: 16, availableGB: 8, usedPercent: 50 },
     gpu: { name: 'NVIDIA GeForce GTX 1660', driver: '537.42', isGeneric: false },
     storage: [{ mount: '/', totalGB: 500, freeGB: 250, usedPercent: 50 }],
@@ -77,8 +77,15 @@ describe('Full flow: doctor → detect → propose → confirm', () => {
     const genericItem = report.items.find(i => i.id === 'gpu-generic-driver');
     expect(genericItem).toBeDefined();
 
-    const suggestedActions = findActionsForIssue(report.items);
+    // Map doctor item to an Observation for the registry API
+    const observations = [{
+      fact: genericItem!.message,
+      category: 'gpu' as const,
+      severity: genericItem!.severity as any,
+    }];
+    const suggestedActions = findActionsForIssue(observations, 'windows');
     expect(suggestedActions.length).toBeGreaterThan(0);
+    expect(suggestedActions.some(sa => sa.action.id === 'check-gpu-driver')).toBe(true);
   });
 
   it('check-gpu-driver action should be AUTO_SAFE (no auth required)', async () => {

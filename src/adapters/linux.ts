@@ -9,6 +9,7 @@ import type {
   Capability,
   PlatformCapabilities,
 } from '../core/types.js';
+import { isGenericGpu } from '../shared/gpu.js';
 
 function sh(command: string): string {
   try {
@@ -23,15 +24,6 @@ function sh(command: string): string {
 }
 
 // ─── GPU detection ──────────────────────────────────────────
-
-const GENERIC_LINUX_GPU = [
-  'ASPEED', 'Matrox', 'VMware', 'VirtualBox', 'QXL',
-  'Microsoft Basic', 'Cirrus', 'Bochs',
-];
-
-function isGenericLinuxGpu(name: string): boolean {
-  return GENERIC_LINUX_GPU.some((p) => name.toLowerCase().includes(p.toLowerCase()));
-}
 
 function detectGpu(): { name: string | null; driver: string | null; isGeneric: boolean | null } {
   // Try lspci
@@ -49,7 +41,7 @@ function detectGpu(): { name: string | null; driver: string | null; isGeneric: b
     return {
       name,
       driver,
-      isGeneric: name ? isGenericLinuxGpu(name) : null,
+      isGeneric: name ? isGenericGpu(name) : null,
     };
   }
 
@@ -231,18 +223,19 @@ export class LinuxAdapter implements PlatformAdapter {
       cpu: {
         model: cpu.model ?? 'Unknown CPU',
         cores: cpu.cores,
+        usage: null, // /proc/stat not parsed for real-time CPU%
       },
       memory: {
-        totalGB: mem.totalGB ?? 0,
-        availableGB: mem.availableGB ?? 0,
-        usedPercent: mem.totalGB && mem.availableGB
+        totalGB: mem.totalGB,
+        availableGB: mem.availableGB,
+        usedPercent: mem.totalGB != null && mem.availableGB != null
           ? Math.round(((mem.totalGB - mem.availableGB) / mem.totalGB) * 100)
           : 0,
       },
       gpu: {
         name: gpu.name ?? 'Unknown GPU',
         driver: gpu.driver ?? 'unknown',
-        isGeneric: gpu.isGeneric ?? true,
+        isGeneric: gpu.isGeneric,
       },
       storage,
       temperature: temperature !== null ? { cpuCelsius: temperature } : null,

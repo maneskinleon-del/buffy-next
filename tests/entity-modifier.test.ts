@@ -5,16 +5,16 @@ describe('Entity/Modifier Binding', () => {
 
   // ─── Entity-modifier pairs ────────────────────────────────
 
-  it('should bind "lento" to wifi → network checks', () => {
+  it('should bind "lento" to wifi → storage/processes checks', () => {
     const result = bindEntityModifier('wifi es lento');
-    expect(result.checks).toContain('network');
-    expect(result.checks).toContain('os');
+    expect(result.checks).toContain('storage');
+    expect(result.checks).toContain('processes');
     expect(result.hasEntityBoundModifier).toBe(true);
   });
 
-  it('should bind "lento" to internet → network checks', () => {
+  it('should bind "lento" to internet → storage/processes checks', () => {
     const result = bindEntityModifier('internet va lento');
-    expect(result.checks).toContain('network');
+    expect(result.checks).toContain('storage');
     expect(result.hasEntityBoundModifier).toBe(true);
   });
 
@@ -92,7 +92,7 @@ describe('Entity/Modifier Binding', () => {
   it('should find entity within window of 4 tokens', () => {
     // "wifi" is 3 tokens away from "lento"
     const result = bindEntityModifier('el wifi de casa está lento');
-    expect(result.checks).toContain('network');
+    expect(result.checks).toContain('storage');
     expect(result.hasEntityBoundModifier).toBe(true);
   });
 
@@ -113,7 +113,7 @@ describe('Entity/Modifier Binding', () => {
 
   it('should handle case insensitivity', () => {
     const result = bindEntityModifier('WiFi es LENTO');
-    expect(result.checks).toContain('network');
+    expect(result.checks).toContain('storage');
     expect(result.hasEntityBoundModifier).toBe(true);
   });
 

@@ -1,7 +1,7 @@
 // Buffy Next — Presenter
 // Formats output for human display and JSON
 
-import type { DoctorReport, DiagnosticItem, Capability, ActionResult, PlatformInfo, SystemInfo, CheckResult, RecommendedAction } from './types.js';
+import type { DoctorReport, DiagnosticItem, Capability, ActionResult, PlatformInfo, SystemInfo, CheckResult, RecommendedAction, Observation, Inference } from './types.js';
 import type { DiagnosticResponse, Observability } from './diagnose.js';
 
 // ─── Colors ─────────────────────────────────────────────────
@@ -46,7 +46,8 @@ export function renderGreeting(report: DoctorReport): string {
 
   // Platform summary
   lines.push(`  ${report.platform.os} · ${report.system.cpu.model}`);
-  lines.push(`  RAM: ${report.system.memory.totalGB} GB · GPU: ${report.system.gpu.name}`);
+  const ramLabel = report.system.memory.totalGB != null ? `${report.system.memory.totalGB} GB` : 'no disponible';
+  lines.push(`  RAM: ${ramLabel} · GPU: ${report.system.gpu.name}`);
 
   // Problems
   const problems = report.items.filter(i => i.severity !== 'ok');
@@ -121,22 +122,33 @@ export function renderDoctorReport(report: DoctorReport): string {
 
 // ─── Diagnostic Report ──────────────────────────────────────
 
-export function renderDiagnosticReport(items: DiagnosticItem[]): string {
+export function renderDiagnosticReport(
+  observations: Observation[],
+  inferences: Inference[],
+): string {
   const lines: string[] = [];
 
   lines.push('');
   lines.push(`${C.bold}🔍 Diagnosticando...${C.reset}`);
   lines.push('');
 
-  for (const item of items) {
-    const icon = severityIcon(item.severity);
-    lines.push(`  ${icon} ${item.message}`);
-    if (item.explanation) {
-      lines.push(`     ${C.dim}${item.explanation}${C.reset}`);
+  // Observations (measured facts)
+  lines.push(`${C.bold}📊 Observaciones:${C.reset}`);
+  for (const obs of observations) {
+    const icon = severityIcon(obs.severity);
+    lines.push(`  ${icon} ${obs.fact}`);
+  }
+  lines.push('');
+
+  // Inferences (possible causes)
+  if (inferences.length > 0) {
+    lines.push(`${C.bold}💡 Posibles causas:${C.reset}`);
+    for (const inf of inferences) {
+      lines.push(`  ${E.heart} ${inf.statement}`);
     }
+    lines.push('');
   }
 
-  lines.push('');
   return lines.join('\n');
 }
 
