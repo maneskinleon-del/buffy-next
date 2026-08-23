@@ -1,14 +1,6 @@
-// Buffy Next — Unified Execution Pipeline (v2.3)
-// Single path for ALL action execution.
-//
-// SECURITY ARCHITECTURE:
-//   All 7 physical executors are PRIVATE to this module (not exported).
-//   The ExecutorRegistry is built internally and never exposed.
-//   The ONLY public export is executeWithGates().
-//
-//   Public API → executeWithGates() → ActionGate → private executors → physical effect
-//
-//   There is NO public path to obtain an executor function.
+// Buffy Next — Pipeline Test Harness (v2.3)
+// Test-only utilities for injecting custom executors and action definitions.
+// NOT part of the public API. Only importable by test files.
 
 import { execSync } from 'node:child_process';
 import type { ActionDefinition, ActionResult, ActionExecutor, CanonicalRequest, PlatformAdapter, PromptProvider } from './types.js';
@@ -18,47 +10,11 @@ import { renderActionResult, toJSON } from './presenter.js';
 import { loadState, updateState } from '../state/store.js';
 import { getAllActions } from '../actions/registry.js';
 
-/**
- * Public pipeline options.
- * This is the ONLY shape accepted by the public executeWithGates() API.
- * Does NOT include: executors, executor maps, action registries, security context.
- */
-export interface PipelineOptions {
-  adapter: PlatformAdapter;
-  action: ActionDefinition;
-  /** Raw parameters from the caller (e.g., tool name for install-tool) */
-  rawParams?: string;
-  jsonMode?: boolean;
-  promptUser?: PromptProvider;
-}
-
-/**
- * SECURITY: fields that must NEVER be accepted from external callers.
- * These are test-only overrides — internal to this module.
- */
-const DISALLOWED_FIELDS = ['customExecutorMap', 'actions'] as const;
-
-/**
- * Internal pipeline options — extends public with test-only overrides.
- * NOT exported. Only used by executeWithGatesForTests().
- */
-interface InternalPipelineOptions extends PipelineOptions {
-  /** Override the action definitions (TEST ONLY — never from public API) */
-  actions?: ActionDefinition[];
-  /** Override the executor map (TEST ONLY — never from public API) */
-  customExecutorMap?: Record<string, ActionExecutor>;
-}
-
 // ═══════════════════════════════════════════════════════════════════
-// PRIVATE EXECUTORS — not exported, not importable from outside
+// PRIVATE EXECUTORS — copied from pipeline.ts for test isolation
 // ═══════════════════════════════════════════════════════════════════
-
-// ─── install-tool ──────────────────────────────────────────
 
 function detectLinuxPackageManager(): 'apt' | 'dnf' | 'pacman' | 'zypper' | null {
-  // ESM-compatible: use static import resolved at top of module
-  // (execSync is imported via `import { execSync } from 'node:child_process'` at module level)
-
   try { execSync('command -v apt', { encoding: 'utf-8', timeout: 2000 }); return 'apt'; } catch { /* */ }
   try { execSync('command -v dnf', { encoding: 'utf-8', timeout: 2000 }); return 'dnf'; } catch { /* */ }
   try { execSync('command -v pacman', { encoding: 'utf-8', timeout: 2000 }); return 'pacman'; } catch { /* */ }
@@ -90,8 +46,6 @@ const execInstallTool: ActionExecutor = async (request: CanonicalRequest): Promi
   }
 };
 
-// ─── change-power-plan ─────────────────────────────────────
-
 const HIGH_PERFORMANCE_GUID = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
 
 const execChangePowerPlan: ActionExecutor = async (): Promise<ActionResult> => {
@@ -111,8 +65,6 @@ const execChangePowerPlan: ActionExecutor = async (): Promise<ActionResult> => {
   }
 };
 
-// ─── check-shizuku ─────────────────────────────────────────
-
 const execCheckShizuku: ActionExecutor = async (): Promise<ActionResult> => {
   try {
     const { execSync } = await import('child_process');
@@ -126,8 +78,6 @@ const execCheckShizuku: ActionExecutor = async (): Promise<ActionResult> => {
     return { success: false, message: `Shizuku no responde: ${error instanceof Error ? error.message : String(error)}` };
   }
 };
-
-// ─── check-gpu-driver ──────────────────────────────────────
 
 const GENERIC_GPU_PATTERNS = ['Microsoft Basic Display', 'Microsoft Basic Render', 'Standard VGA', 'Microsoft Generic'];
 function isGenericGpu(name: string): boolean {
@@ -152,8 +102,6 @@ const execCheckGpuDriver: ActionExecutor = async (): Promise<ActionResult> => {
   }
 };
 
-// ─── check-driver-status ───────────────────────────────────
-
 const execCheckDriverStatus: ActionExecutor = async (): Promise<ActionResult> => {
   try {
     const { execSync } = await import('child_process');
@@ -169,8 +117,6 @@ const execCheckDriverStatus: ActionExecutor = async (): Promise<ActionResult> =>
     return { success: false, message: `No se pudo verificar el driver: ${error instanceof Error ? error.message : String(error)}` };
   }
 };
-
-// ─── list-processes ────────────────────────────────────────
 
 const execListProcesses: ActionExecutor = async (): Promise<ActionResult> => {
   try {
@@ -198,8 +144,6 @@ const execListProcesses: ActionExecutor = async (): Promise<ActionResult> => {
   }
 };
 
-// ─── check-system-temp ─────────────────────────────────────
-
 const execCheckSystemTemp: ActionExecutor = async (): Promise<ActionResult> => {
   try {
     const { execSync } = await import('child_process');
@@ -217,9 +161,9 @@ const execCheckSystemTemp: ActionExecutor = async (): Promise<ActionResult> => {
   }
 };
 
-// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 // PRIVATE EXECUTOR MAP — all executors are internal
-// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 
 const PRIVATE_EXECUTOR_MAP: Record<string, ActionExecutor> = {
   'install-tool': execInstallTool,
@@ -239,8 +183,6 @@ function buildRegistry(overrides?: Record<string, ActionExecutor>): ExecutorRegi
   const map = overrides
     ? { ...PRIVATE_EXECUTOR_MAP, ...overrides }
     : PRIVATE_EXECUTOR_MAP;
-  // Return a plain object matching the ExecutorRegistry interface.
-  // No class instantiation — no way to obtain the real registry from outside.
   return {
     get: (id: string) => map[id],
     has: (id: string) => id in map,
@@ -248,60 +190,9 @@ function buildRegistry(overrides?: Record<string, ActionExecutor>): ExecutorRegi
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// PUBLIC API — the ONLY export from this module
+// TEST-ONLY INTERNAL EXECUTION
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * Execute an action through the ActionGate.
- * This is the ONLY execution path — both `buffy act` and `buffy diagnose` use it.
- *
- * The registry is built internally with private executors.
- * No executor function is ever exposed to the caller.
- */
-/**
- * SECURITY: reject any disallowed fields injected by the caller.
- * This is the runtime boundary — TypeScript structural typing cannot enforce this alone.
- */
-function assertNoDisallowedFields(options: Record<string, unknown>): void {
-  for (const field of DISALLOWED_FIELDS) {
-    if (field in options && options[field] !== undefined) {
-      throw new Error(
-        `Security violation: field "${field}" is not allowed in the public pipeline API. ` +
-        `This field is for internal testing only.`
-      );
-    }
-  }
-}
-
-/**
- * Execute an action through the ActionGate.
- * This is the ONLY public execution path.
- *
- * Accepts ONLY: adapter, action, rawParams, jsonMode, promptUser.
- * Rejects: customExecutorMap, actions, or any other injection.
- *
- * The registry is built internally with private executors.
- * No executor function is ever exposed to the caller.
- */
-export async function executeWithGates(options: PipelineOptions): Promise<ActionResult> {
-  // SECURITY: reject injection of executors or action overrides
-  assertNoDisallowedFields(options as unknown as Record<string, unknown>);
-
-  const { adapter, action, rawParams, jsonMode = false, promptUser } = options;
-
-  // Public path: always use real actions and private executors
-  const actionDefs = getAllActions();
-  const registry = buildRegistry();
-
-  return executeWithGatesInternal({ adapter, action, rawParams, jsonMode, promptUser, actionDefs, registry });
-}
-
-/**
- * INTERNAL: execute with full control over action definitions and executor registry.
- * Used by tests ONLY. NOT exported from this module.
- *
- * @internal
- */
 async function executeWithGatesInternal(options: {
   adapter: PlatformAdapter;
   action: ActionDefinition;
@@ -341,4 +232,23 @@ async function executeWithGatesInternal(options: {
   return result;
 }
 
-
+/**
+ * TEST HELPER: execute with custom executors and action definitions.
+ * NOT part of the public API. Only importable by test files.
+ *
+ * @internal
+ */
+export async function executeWithGatesForTests(options: {
+  adapter: PlatformAdapter;
+  action: ActionDefinition;
+  rawParams?: string;
+  jsonMode?: boolean;
+  promptUser?: PromptProvider;
+  actions?: ActionDefinition[];
+  customExecutorMap?: Record<string, ActionExecutor>;
+}): Promise<ActionResult> {
+  const { actions: actionOverrides, customExecutorMap, ...rest } = options;
+  const actionDefs = actionOverrides ?? getAllActions();
+  const registry = buildRegistry(customExecutorMap);
+  return executeWithGatesInternal({ ...rest, actionDefs, registry });
+}

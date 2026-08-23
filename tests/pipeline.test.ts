@@ -18,7 +18,8 @@ vi.mock('../src/core/presenter.js', () => ({
   renderCapabilities: vi.fn(),
 }));
 
-import { executeWithGates, executeWithGatesForTests } from '../src/core/pipeline.js';
+import { executeWithGates } from '../src/core/pipeline.js';
+import { executeWithGatesForTests } from '../src/core/pipeline.test-harness.js';
 import { loadState, updateState } from '../src/state/store.js';
 
 // ─── Mock Adapter (no execute — detection only) ───────────
