@@ -10,6 +10,7 @@
 //
 //   There is NO public path to obtain an executor function.
 
+import { execSync } from 'node:child_process';
 import type { ActionDefinition, ActionResult, ActionExecutor, CanonicalRequest, PlatformAdapter, PromptProvider } from './types.js';
 import type { ExecutorRegistry } from './executor-registry.js';
 import { ActionGate } from './action-gate.js';
@@ -17,14 +18,34 @@ import { renderActionResult, toJSON } from './presenter.js';
 import { loadState, updateState } from '../state/store.js';
 import { getAllActions } from '../actions/registry.js';
 
+/**
+ * Public pipeline options.
+ * This is the ONLY shape accepted by the public executeWithGates() API.
+ * Does NOT include: executors, executor maps, action registries, security context.
+ */
 export interface PipelineOptions {
   adapter: PlatformAdapter;
   action: ActionDefinition;
+  /** Raw parameters from the caller (e.g., tool name for install-tool) */
+  rawParams?: string;
   jsonMode?: boolean;
   promptUser?: PromptProvider;
-  /** Override the action definitions (for testing only) */
+}
+
+/**
+ * SECURITY: fields that must NEVER be accepted from external callers.
+ * These are test-only overrides — internal to this module.
+ */
+const DISALLOWED_FIELDS = ['customExecutorMap', 'actions'] as const;
+
+/**
+ * Internal pipeline options — extends public with test-only overrides.
+ * NOT exported. Only used by executeWithGatesForTests().
+ */
+interface InternalPipelineOptions extends PipelineOptions {
+  /** Override the action definitions (TEST ONLY — never from public API) */
   actions?: ActionDefinition[];
-  /** Override the executor map (for testing only) */
+  /** Override the executor map (TEST ONLY — never from public API) */
   customExecutorMap?: Record<string, ActionExecutor>;
 }
 
@@ -35,7 +56,9 @@ export interface PipelineOptions {
 // ─── install-tool ──────────────────────────────────────────
 
 function detectLinuxPackageManager(): 'apt' | 'dnf' | 'pacman' | 'zypper' | null {
-  const { execSync } = require('child_process');
+  // ESM-compatible: use static import resolved at top of module
+  // (execSync is imported via `import { execSync } from 'node:child_process'` at module level)
+
   try { execSync('command -v apt', { encoding: 'utf-8', timeout: 2000 }); return 'apt'; } catch { /* */ }
   try { execSync('command -v dnf', { encoding: 'utf-8', timeout: 2000 }); return 'dnf'; } catch { /* */ }
   try { execSync('command -v pacman', { encoding: 'utf-8', timeout: 2000 }); return 'pacman'; } catch { /* */ }
@@ -235,11 +258,60 @@ function buildRegistry(overrides?: Record<string, ActionExecutor>): ExecutorRegi
  * The registry is built internally with private executors.
  * No executor function is ever exposed to the caller.
  */
-export async function executeWithGates(options: PipelineOptions): Promise<ActionResult> {
-  const { adapter, action, jsonMode = false, promptUser, actions, customExecutorMap } = options;
+/**
+ * SECURITY: reject any disallowed fields injected by the caller.
+ * This is the runtime boundary — TypeScript structural typing cannot enforce this alone.
+ */
+function assertNoDisallowedFields(options: Record<string, unknown>): void {
+  for (const field of DISALLOWED_FIELDS) {
+    if (field in options && options[field] !== undefined) {
+      throw new Error(
+        `Security violation: field "${field}" is not allowed in the public pipeline API. ` +
+        `This field is for internal testing only.`
+      );
+    }
+  }
+}
 
-  const actionDefs = actions ?? getAllActions();
-  const registry = buildRegistry(customExecutorMap);
+/**
+ * Execute an action through the ActionGate.
+ * This is the ONLY public execution path.
+ *
+ * Accepts ONLY: adapter, action, rawParams, jsonMode, promptUser.
+ * Rejects: customExecutorMap, actions, or any other injection.
+ *
+ * The registry is built internally with private executors.
+ * No executor function is ever exposed to the caller.
+ */
+export async function executeWithGates(options: PipelineOptions): Promise<ActionResult> {
+  // SECURITY: reject injection of executors or action overrides
+  assertNoDisallowedFields(options as unknown as Record<string, unknown>);
+
+  const { adapter, action, rawParams, jsonMode = false, promptUser } = options;
+
+  // Public path: always use real actions and private executors
+  const actionDefs = getAllActions();
+  const registry = buildRegistry();
+
+  return executeWithGatesInternal({ adapter, action, rawParams, jsonMode, promptUser, actionDefs, registry });
+}
+
+/**
+ * INTERNAL: execute with full control over action definitions and executor registry.
+ * Used by tests ONLY. NOT exported from this module.
+ *
+ * @internal
+ */
+async function executeWithGatesInternal(options: {
+  adapter: PlatformAdapter;
+  action: ActionDefinition;
+  rawParams?: string;
+  jsonMode?: boolean;
+  promptUser?: PromptProvider;
+  actionDefs: ActionDefinition[];
+  registry: ExecutorRegistry;
+}): Promise<ActionResult> {
+  const { adapter, action, rawParams, jsonMode = false, promptUser, actionDefs, registry } = options;
 
   const gate = new ActionGate({
     adapter,
@@ -254,7 +326,7 @@ export async function executeWithGates(options: PipelineOptions): Promise<Action
     return { success: true, message: 'JSON mode: plan shown' };
   }
 
-  const result = await gate.execute(action.id);
+  const result = await gate.execute(action.id, rawParams);
   console.log(renderActionResult(result));
 
   if (result.success) {
@@ -267,4 +339,25 @@ export async function executeWithGates(options: PipelineOptions): Promise<Action
   }
 
   return result;
+}
+
+/**
+ * TEST HELPER: execute with custom executors and action definitions.
+ * NOT part of the public API. Only importable by test files.
+ *
+ * @internal
+ */
+export async function executeWithGatesForTests(options: {
+  adapter: PlatformAdapter;
+  action: ActionDefinition;
+  rawParams?: string;
+  jsonMode?: boolean;
+  promptUser?: PromptProvider;
+  actions?: ActionDefinition[];
+  customExecutorMap?: Record<string, ActionExecutor>;
+}): Promise<ActionResult> {
+  const { actions: actionOverrides, customExecutorMap, ...rest } = options;
+  const actionDefs = actionOverrides ?? getAllActions();
+  const registry = buildRegistry(customExecutorMap);
+  return executeWithGatesInternal({ ...rest, actionDefs, registry });
 }

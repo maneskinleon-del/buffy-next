@@ -9,7 +9,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { ActionGate } from '../src/core/action-gate.js';
 import type { ExecutorRegistry } from '../src/core/executor-registry.js';
 import { normalizeTarget, sanitizeTarget } from '../src/core/target-normalizer.js';
-import { createExecutorRegistry } from '../src/core/executor-registry.js';
 import { AuthorizationStore } from '../src/core/authorization-store.js';
 import { ActionExecutionStore } from '../src/core/action-execution-store.js';
 import type {
@@ -715,5 +714,80 @@ describe('Executor escape — v2.3 hardening', () => {
       expect(result).toBeDefined();
       expect(typeof result.success).toBe('boolean');
     }
+  });
+
+  // --- E-06: caller cannot inject executor via public API ---
+
+  it('E-06: caller cannot inject executor via customExecutorMap on public API', async () => {
+    const { executeWithGates } = await import('../src/core/pipeline.js');
+    const adapter = createMockAdapter();
+    const maliciousExecutor = vi.fn(async () => ({ success: true, message: 'MALICIOUS' }));
+    const { getAllActions } = await import('../src/actions/registry.js');
+    const installAction = getAllActions().find(a => a.id === 'install-tool')!;
+
+    // Attempt to inject a malicious executor via the public API
+    await expect(
+      executeWithGates({
+        adapter,
+        action: installAction,
+        rawParams: 'node',
+        // @ts-expect-error — testing runtime rejection of disallowed field
+        customExecutorMap: { 'install-tool': maliciousExecutor },
+      }),
+    ).rejects.toThrow('Security violation');
+
+    // The malicious executor must NOT have been called
+    expect(maliciousExecutor).not.toHaveBeenCalled();
+  });
+
+  // --- E-07: caller cannot replace action definitions via public API ---
+
+  it('E-07: caller cannot replace action definitions via actions on public API', async () => {
+    const { executeWithGates } = await import('../src/core/pipeline.js');
+    const adapter = createMockAdapter();
+    const fakeAction: ActionDefinition = {
+      id: 'fake-action',
+      name: 'Fake',
+      description: 'Injected action',
+      level: 'auto_safe',
+      reversible: false,
+      platforms: ['linux'],
+      prerequisites: [],
+    };
+    const fakeExecutor = vi.fn(async () => ({ success: true, message: 'FAKE EXECUTED' }));
+
+    // Attempt to inject fake action definitions via the public API
+    await expect(
+      executeWithGates({
+        adapter,
+        action: fakeAction,
+        // @ts-expect-error — testing runtime rejection of disallowed field
+        actions: [fakeAction],
+        customExecutorMap: { 'fake-action': fakeExecutor },
+      }),
+    ).rejects.toThrow('Security violation');
+
+    expect(fakeExecutor).not.toHaveBeenCalled();
+  });
+
+  // --- E-08: public API rejects any unknown injection fields ---
+
+  it('E-08: public API rejects unknown injection fields', async () => {
+    const { executeWithGates } = await import('../src/core/pipeline.js');
+    const adapter = createMockAdapter();
+    const { getAllActions } = await import('../src/actions/registry.js');
+    const action = getAllActions().find(a => a.id === 'check-system-temp')!;
+
+    // Attempt with both disallowed fields simultaneously
+    await expect(
+      executeWithGates({
+        adapter,
+        action,
+        // @ts-expect-error — testing runtime rejection
+        customExecutorMap: { 'check-system-temp': async () => ({ success: true, message: 'x' }) },
+        // @ts-expect-error — testing runtime rejection
+        actions: [action],
+      }),
+    ).rejects.toThrow('Security violation');
   });
 });

@@ -141,8 +141,8 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
     process.exit(1);
   }
 
-  // Pass rawParams directly — no setInstallTarget
-  await executeWithGates({ adapter, action, jsonMode, promptUser });
+  // Pass rawParams through the pipeline — no setInstallTarget, no global state
+  await executeWithGates({ adapter, action, rawParams, jsonMode, promptUser });
 }
 
 async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {

@@ -18,7 +18,7 @@ vi.mock('../src/core/presenter.js', () => ({
   renderCapabilities: vi.fn(),
 }));
 
-import { executeWithGates } from '../src/core/pipeline.js';
+import { executeWithGates, executeWithGatesForTests } from '../src/core/pipeline.js';
 import { loadState, updateState } from '../src/state/store.js';
 
 // ─── Mock Adapter (no execute — detection only) ───────────
@@ -105,7 +105,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   it('should block forbidden actions', async () => {
     const adapter = createMockAdapter();
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: forbiddenAction,
       actions: TEST_ACTIONS,
@@ -133,7 +133,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
       prerequisites: [],
     };
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: windowsOnlyAction,
       actions: [windowsOnlyAction],
@@ -150,7 +150,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   it('should block when prerequisites are missing', async () => {
     const adapter = createMockAdapter([]); // no capabilities
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: actionWithPrereqs,
       actions: TEST_ACTIONS,
@@ -167,7 +167,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
       { name: 'Node.js', status: 'installed', version: '26.0.0' },
     ]);
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: actionWithPrereqs,
       actions: TEST_ACTIONS,
@@ -184,7 +184,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('y');
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: confirmAction,
       promptUser,
@@ -201,7 +201,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('n');
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: confirmAction,
       promptUser,
@@ -219,7 +219,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('');
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: confirmAction,
       promptUser,
@@ -236,7 +236,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('si');
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: confirmAction,
       promptUser,
@@ -252,7 +252,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn().mockResolvedValue('sí');
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: confirmAction,
       promptUser,
@@ -270,7 +270,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const adapter = createMockAdapter();
     const promptUser = vi.fn();
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: autoSafeAction,
       promptUser,
@@ -289,7 +289,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const adapter = createMockAdapter();
 
-    await executeWithGates({
+    await executeWithGatesForTests({
       adapter,
       action: autoSafeAction,
       jsonMode: true,
@@ -307,7 +307,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   it('should persist action in state.json after execution', async () => {
     const adapter = createMockAdapter();
 
-    await executeWithGates({
+    await executeWithGatesForTests({
       adapter,
       action: autoSafeAction,
       actions: TEST_ACTIONS,
@@ -332,7 +332,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   it('should error when CONFIRM action has no promptUser', async () => {
     const adapter = createMockAdapter();
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: confirmAction,
       actions: TEST_ACTIONS,
@@ -349,7 +349,7 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   it('should return error for unknown action ID', async () => {
     const adapter = createMockAdapter();
 
-    const result = await executeWithGates({
+    const result = await executeWithGatesForTests({
       adapter,
       action: { id: 'nonexistent', name: 'X', description: 'X', level: 'auto_safe', reversible: false, platforms: ['windows'], prerequisites: [] },
       actions: [],
@@ -358,5 +358,168 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain('no encontrada');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// rawParams Transport Tests (SEQ-6.1 — BUG #2 fix verification)
+//
+// Verifies that rawParams flows correctly from CLI through the pipeline
+// to the ActionGate and arrives as the executor's request.target.
+// ═══════════════════════════════════════════════════════════════════
+
+describe('rawParams transport — CLI → Pipeline → ActionGate → Executor', () => {
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const installAction: ActionDefinition = {
+    id: 'install-tool',
+    name: 'Install Tool',
+    description: 'Install a tool',
+    level: 'auto_safe',
+    reversible: false,
+    platforms: ['windows', 'android-termux', 'linux'],
+    prerequisites: [],
+  };
+
+  // A) install-tool receives 'node' — executor receives rawParams as target
+  it('A) executor receives rawParams as request.target', async () => {
+    const adapter = createMockAdapter();
+    let capturedTarget = '';
+    const capturingExecutor: ActionExecutor = async (request) => {
+      capturedTarget = request.target;
+      return { success: true, message: `installed ${request.target}` };
+    };
+
+    await executeWithGatesForTests({
+      adapter,
+      action: installAction,
+      rawParams: 'node',
+      actions: [installAction],
+      customExecutorMap: { 'install-tool': capturingExecutor },
+    });
+
+    expect(capturedTarget).toBe('node');
+  });
+
+  // B) CanonicalRequest contains exactly 'node'
+  it('B) CanonicalRequest target matches rawParams exactly', async () => {
+    const adapter = createMockAdapter();
+    let capturedTarget = '';
+    const capturingExecutor: ActionExecutor = async (request) => {
+      capturedTarget = request.target;
+      return { success: true, message: 'ok' };
+    };
+
+    await executeWithGatesForTests({
+      adapter,
+      action: installAction,
+      rawParams: 'node',
+      actions: [installAction],
+      customExecutorMap: { 'install-tool': capturingExecutor },
+    });
+
+    // CanonicalRequest.target should be exactly 'node'
+    expect(capturedTarget).toBe('node');
+  });
+
+  // C) Different rawParams arrive correctly
+  it('C) different rawParams values arrive correctly at executor', async () => {
+    const adapter = createMockAdapter();
+    const capturedTargets: string[] = [];
+    const capturingExecutor: ActionExecutor = async (request) => {
+      capturedTargets.push(request.target);
+      return { success: true, message: 'ok' };
+    };
+
+    await executeWithGatesForTests({
+      adapter,
+      action: installAction,
+      rawParams: 'git',
+      actions: [installAction],
+      customExecutorMap: { 'install-tool': capturingExecutor },
+    });
+
+    await executeWithGatesForTests({
+      adapter,
+      action: installAction,
+      rawParams: 'docker',
+      actions: [installAction],
+      customExecutorMap: { 'install-tool': capturingExecutor },
+    });
+
+    expect(capturedTargets).toEqual(['git', 'docker']);
+  });
+
+  // D) Mutating original input after normalization does NOT change the target
+  it('D) mutating rawParams object after call does not affect CanonicalRequest', async () => {
+    const adapter = createMockAdapter();
+    let capturedTarget = '';
+    const capturingExecutor: ActionExecutor = async (request) => {
+      capturedTarget = request.target;
+      return { success: true, message: 'ok' };
+    };
+
+    const input = { value: 'node' };
+    await executeWithGatesForTests({
+      adapter,
+      action: installAction,
+      rawParams: input.value,
+      actions: [installAction],
+      customExecutorMap: { 'install-tool': capturingExecutor },
+    });
+
+    // Mutate the original input
+    input.value = 'MALICIOUS';
+
+    // The executor already received 'node' — the mutation happened after
+    expect(capturedTarget).toBe('node');
+  });
+
+  // E) Negative confirmation does not execute — target not consumed
+  it('E) negative confirmation prevents execution — no target reaches executor', async () => {
+    const adapter = createMockAdapter();
+    const executorSpy = vi.fn().mockResolvedValue({ success: true, message: 'should not run' });
+    const promptUser = vi.fn().mockResolvedValue('no');
+
+    const confirmInstallAction: ActionDefinition = {
+      ...installAction,
+      level: 'confirm',
+    };
+
+    const result = await executeWithGatesForTests({
+      adapter,
+      action: confirmInstallAction,
+      rawParams: 'node',
+      promptUser,
+      actions: [confirmInstallAction],
+      customExecutorMap: { 'install-tool': executorSpy },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('cancelada');
+    expect(executorSpy).not.toHaveBeenCalled();
+  });
+
+  // F) rawParams is optional — empty target when omitted
+  it('F) omitting rawParams produces empty target in CanonicalRequest', async () => {
+    const adapter = createMockAdapter();
+    let capturedTarget = '__NOT_SET__';
+    const capturingExecutor: ActionExecutor = async (request) => {
+      capturedTarget = request.target;
+      return { success: true, message: 'ok' };
+    };
+
+    await executeWithGatesForTests({
+      adapter,
+      action: installAction,
+      // rawParams intentionally omitted
+      actions: [installAction],
+      customExecutorMap: { 'install-tool': capturingExecutor },
+    });
+
+    expect(capturedTarget).toBe('');
   });
 });
