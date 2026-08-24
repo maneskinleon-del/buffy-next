@@ -90,6 +90,32 @@ describe('detectPlatform', () => {
     expect(detectPlatform(LINUX_ENV, 'linux')).toBe('linux');
   });
 
+  // ── Node.js v26+ — process.platform === 'android' ───────
+
+  it('android without Termux env → unknown', () => {
+    expect(detectPlatform(LINUX_ENV, 'android')).toBe('unknown');
+  });
+
+  it('android + TERMUX_VERSION → android-termux', () => {
+    expect(detectPlatform({ ...LINUX_ENV, TERMUX_VERSION: '0.118' }, 'android')).toBe('android-termux');
+  });
+
+  it('android + PREFIX containing com.termux → android-termux', () => {
+    expect(detectPlatform({ ...LINUX_ENV, PREFIX: '/data/data/com.termux/files/usr' }, 'android')).toBe('android-termux');
+  });
+
+  it('android + HOME containing com.termux → android-termux', () => {
+    expect(detectPlatform({ ...LINUX_ENV, HOME: '/data/data/com.termux/files/home' }, 'android')).toBe('android-termux');
+  });
+
+  it('android + ANDROID_ROOT=/system AND ANDROID_DATA=/data → android-termux', () => {
+    expect(detectPlatform({
+      ...LINUX_ENV,
+      ANDROID_ROOT: '/system',
+      ANDROID_DATA: '/data',
+    }, 'android')).toBe('android-termux');
+  });
+
   // ── Unknown platforms ────────────────────────────────────
 
   it('darwin → unknown', () => {

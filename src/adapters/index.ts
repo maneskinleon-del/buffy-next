@@ -22,8 +22,8 @@ export function detectPlatform(
   // Windows
   if (os === 'win32') return 'windows';
 
-  // Linux (covers both desktop Linux and Android/Termux)
-  if (os === 'linux') {
+  // Linux/Android (covers desktop Linux and Android/Termux, including Node v26+ where process.platform === 'android')
+  if (os === 'linux' || os === 'android') {
     // Termux detection — these are definitive Termux indicators
     const isTermux = !!e.TERMUX_VERSION
       || !!e.TERMUX_APP_PACKAGE_MANAGER
@@ -41,8 +41,9 @@ export function detectPlatform(
 
     if (isAndroid) return 'android-termux';
 
-    // Pure Linux desktop — Phase 2
-    return 'linux';
+    // Pure Linux desktop — only when os is actually 'linux'
+    if (os === 'linux') return 'linux';
+    // android without Termux indicators → unknown
   }
 
   return 'unknown';
