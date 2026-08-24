@@ -10,6 +10,6 @@ export const checkGpuDriver: ActionDefinition = {
   description: 'Detecta si tu GPU usa un driver genérico o oficial',
   level: 'auto_safe',
   reversible: false,
-  platforms: ['windows', 'android-termux'],
+  platforms: ['windows', 'android-termux', 'linux'],
   prerequisites: [],
 };

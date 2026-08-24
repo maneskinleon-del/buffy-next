@@ -9,6 +9,6 @@ export const checkSystemTemp: ActionDefinition = {
   description: 'Lee la temperatura actual del CPU y reporta si está dentro de rango',
   level: 'auto_safe',
   reversible: false,
-  platforms: ['windows', 'android-termux'],
+  platforms: ['windows', 'android-termux', 'linux'],
   prerequisites: [],
 };

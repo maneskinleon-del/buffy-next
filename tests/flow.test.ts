@@ -157,4 +157,54 @@ describe('Full flow: doctor → detect → propose → confirm', () => {
     const ids = suggested.map(s => s.action.id);
     expect(ids).toContain('check-network');
   });
+
+  // ─── Linux actions metadata ────────────────────────────────
+
+  it('check-gpu-driver metadata includes linux', () => {
+    const action = findActionById('check-gpu-driver');
+    expect(action).toBeDefined();
+    expect(action!.platforms).toContain('linux');
+    expect(action!.level).toBe('auto_safe');
+  });
+
+  it('check-driver-status metadata includes linux', () => {
+    const action = findActionById('check-driver-status');
+    expect(action).toBeDefined();
+    expect(action!.platforms).toContain('linux');
+    expect(action!.level).toBe('auto_safe');
+  });
+
+  it('check-system-temp metadata includes linux', () => {
+    const action = findActionById('check-system-temp');
+    expect(action).toBeDefined();
+    expect(action!.platforms).toContain('linux');
+    expect(action!.level).toBe('auto_safe');
+  });
+
+  it('list-processes metadata includes linux', () => {
+    const action = findActionById('list-processes');
+    expect(action).toBeDefined();
+    expect(action!.platforms).toContain('linux');
+    expect(action!.level).toBe('auto_safe');
+  });
+
+  // ─── Linux platform gate ───────────────────────────────────
+
+  it('all 4 linux actions pass platform gate on linux', () => {
+    const actionIds = ['check-gpu-driver', 'check-driver-status', 'check-system-temp', 'list-processes'];
+    for (const id of actionIds) {
+      const action = findActionById(id);
+      expect(action).toBeDefined();
+      expect(action!.platforms).toContain('linux');
+    }
+  });
+
+  it('all 4 linux actions are in getAllActions', () => {
+    const all = getAllActions();
+    const ids = all.map(a => a.id);
+    expect(ids).toContain('check-gpu-driver');
+    expect(ids).toContain('check-driver-status');
+    expect(ids).toContain('check-system-temp');
+    expect(ids).toContain('list-processes');
+  });
 });

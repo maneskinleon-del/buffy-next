@@ -138,15 +138,22 @@ const execCheckGpuDriver: ActionExecutor = async (): Promise<ActionResult> => {
   try {
     const { execSync } = await import('child_process');
     let gpuName = 'Unknown'; let driverVersion = 'unknown';
+    let platform = 'android-termux';
     if (process.platform === 'win32') {
+      platform = 'windows';
       try { const raw = execSync('powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_VideoController | Select-Object -First 1 Name,DriverVersion | ConvertTo-Json -Compress"', { encoding: 'utf-8', timeout: 10_000 }); const gpu = JSON.parse(raw); gpuName = gpu.Name ?? 'Unknown'; driverVersion = gpu.DriverVersion ?? 'unknown'; } catch { /* */ }
+    } else if (process.platform === 'linux') {
+      platform = 'linux';
+      try { const line = execSync('lspci 2>/dev/null | grep -i "vga\\|3d\\|display" | head -1', { encoding: 'utf-8', timeout: 5_000 }).trim(); const nameMatch = line.match(/(?:VGA|3D|Display)(?:\s+compatible)?\s+controller:\s*(.+)$/i); gpuName = nameMatch?.[1]?.trim() ?? 'Unknown'; } catch { /* */ }
+      if (gpuName === 'Unknown') { try { const vendor = execSync('cat /sys/class/drm/card0/device/vendor 2>/dev/null', { encoding: 'utf-8', timeout: 3_000 }).trim(); if (vendor) gpuName = `GPU (${vendor})`; } catch { /* */ } }
+      try { const driverLine = execSync('lspci -k 2>/dev/null | grep -i "kernel driver" | head -1', { encoding: 'utf-8', timeout: 5_000 }).trim(); const driverMatch = driverLine.match(/Kernel driver in use:\s*(.+)$/i); driverVersion = driverMatch?.[1]?.trim() ?? 'unknown'; } catch { /* */ }
     } else {
       try { gpuName = execSync('cat /sys/class/kgsl/kgsl-3d0/gpu_model 2>/dev/null || echo ""', { encoding: 'utf-8', timeout: 5_000 }).trim(); } catch { /* */ }
       if (!gpuName) { try { gpuName = execSync('dumpsys SurfaceFlinger 2>/dev/null | grep -i "GLES" | head -1 | sed "s/^GLES: //"', { encoding: 'utf-8', timeout: 5_000 }).trim(); } catch { /* */ } }
       if (!gpuName) gpuName = 'Unknown';
     }
     const isGeneric = isGenericGpu(gpuName);
-    return { success: true, message: isGeneric ? `Driver genérico detectado: ${gpuName}. Tu GPU no está usando el driver oficial.` : `Driver OK: ${gpuName} (${driverVersion})`, details: { gpuName, driverVersion, isGeneric, platform: process.platform === 'win32' ? 'windows' : 'android-termux' } };
+    return { success: true, message: isGeneric ? `Driver genérico detectado: ${gpuName}. Tu GPU no está usando el driver oficial.` : `Driver OK: ${gpuName} (${driverVersion})`, details: { gpuName, driverVersion, isGeneric, platform } };
   } catch (error) {
     return { success: false, message: `No se pudo verificar el driver: ${error instanceof Error ? error.message : String(error)}` };
   }
@@ -160,10 +167,16 @@ const execCheckDriverStatus: ActionExecutor = async (): Promise<ActionResult> =>
     let gpuInfo = '';
     if (process.platform === 'win32') {
       gpuInfo = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_VideoController) | Select-Object Name, DriverVersion | ConvertTo-Json"', { encoding: 'utf-8', timeout: 10000 });
+    } else if (process.platform === 'linux') {
+      try {
+        const line = execSync('lspci 2>/dev/null | grep -i "vga\\|3d\\|display" | head -1', { encoding: 'utf-8', timeout: 5_000 }).trim();
+        const driverLine = execSync('lspci -k 2>/dev/null | grep -i "kernel driver" | head -1', { encoding: 'utf-8', timeout: 5_000 }).trim();
+        gpuInfo = line ? `${line} | ${driverLine}` : 'GPU info not available';
+      } catch { gpuInfo = 'GPU info not available'; }
     } else {
       gpuInfo = execSync('dumpsys SurfaceFlinger 2>/dev/null | grep -i GLES | head -1 || echo "GPU info not available"', { encoding: 'utf-8', timeout: 10000 });
     }
-    const isGeneric = /Basic Display|Microsoft|Standard|Generic/i.test(gpuInfo);
+    const isGeneric = /Basic Display|Microsoft|Standard|Generic|ASPEED|VirtualBox|QXL|Cirrus|Bochs/i.test(gpuInfo);
     return { success: true, message: isGeneric ? 'Driver genérico detectado — tu GPU no está usando el driver oficial' : 'Driver oficial detectado — tu GPU tiene un driver correcto', details: { raw: gpuInfo.trim(), isGeneric } };
   } catch (error) {
     return { success: false, message: `No se pudo verificar el driver: ${error instanceof Error ? error.message : String(error)}` };

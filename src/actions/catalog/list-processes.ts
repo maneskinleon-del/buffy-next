@@ -9,6 +9,6 @@ export const listProcesses: ActionDefinition = {
   description: 'Muestra los procesos que más CPU y memoria están usando',
   level: 'auto_safe',
   reversible: false,
-  platforms: ['windows', 'android-termux'],
+  platforms: ['windows', 'android-termux', 'linux'],
   prerequisites: [],
 };
