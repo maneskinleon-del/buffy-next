@@ -255,6 +255,63 @@ describe('AndroidTermuxAdapter — capabilities()', () => {
   });
 });
 
+// ─── Shizuku capability semantics ─────────────────────────
+
+describe('Shizuku capability — no fake version', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rish not found → status missing', async () => {
+    const adapter = createAdapter();
+    // node found + version, npm found + version, adb missing,
+    // rish missing, then pkg/git/python/scrcpy/sqlite3 missing
+    mockShSequence([
+      '/usr/bin/node', 'v24.18.0',
+      '/usr/bin/npm', '11.18.0',
+      '',  // adb
+      '',  // rish ← missing
+      '', '', '', '', '', '',
+    ]);
+
+    const caps = await adapter.capabilities();
+    const rish = caps.find(c => c.name === 'Shizuku (rish)');
+    expect(rish).toBeDefined();
+    expect(rish!.status).toBe('missing');
+    expect(rish!.version).toBeUndefined();
+  });
+
+  it('rish found but --version returns nothing → installed, no version', async () => {
+    const adapter = createAdapter();
+    // Use mockImplementation for parallel-safe capability detection.
+    // All tools except rish are missing; rish binary exists but --version returns empty.
+    mockExecSync.mockImplementation(((cmd: string) => {
+      if (cmd.includes('command -v rish')) return '/data/data/com.termux/files/home/bin/rish';
+      if (cmd.includes('rish --version')) return '';  // rish has no --version
+      return '';  // everything else not found
+    }) as unknown as typeof execSync);
+
+    const caps = await adapter.capabilities();
+    const rish = caps.find(c => c.name === 'Shizuku (rish)');
+    expect(rish).toBeDefined();
+    expect(rish!.status).toBe('installed');
+    expect(rish!.version).toBeUndefined();
+  });
+
+  it('never returns the artificial string "active" as version', async () => {
+    const adapter = createAdapter();
+    // All tools missing — rish included
+    mockShSequence([
+      '', '', '', '', '', '', '', '', '', '', '', '',
+    ]);
+
+    const caps = await adapter.capabilities();
+    for (const cap of caps) {
+      expect(cap.version).not.toBe('active');
+    }
+  });
+});
+
 // ─── Contract: null semantics ──────────────────────────────
 
 describe('AndroidTermuxAdapter — contract null semantics', () => {

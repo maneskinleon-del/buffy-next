@@ -194,7 +194,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
       { name: 'Node.js', check: 'node', versionCmd: 'node --version' },
       { name: 'npm', check: 'npm', versionCmd: 'npm --version' },
       { name: 'ADB', check: 'adb', versionCmd: 'adb --version' },
-      { name: 'Shizuku (rish)', check: 'rish', versionCmd: 'rish --version 2>/dev/null || echo active' },
+      { name: 'Shizuku (rish)', check: 'rish', versionCmd: 'rish --version 2>/dev/null' },
       { name: 'pkg', check: 'pkg', versionCmd: 'pkg --version' },
       { name: 'git', check: 'git', versionCmd: 'git --version' },
       { name: 'Python', check: 'python', versionCmd: 'python --version' },
