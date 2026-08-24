@@ -288,6 +288,52 @@ const execCheckNetwork: ActionExecutor = async (): Promise<ActionResult> => {
   }
 };
 
+// ─── check-disk-space ─────────────────────────────────────
+
+const execCheckDiskSpace: ActionExecutor = async (): Promise<ActionResult> => {
+  try {
+    const { execSync } = await import('child_process');
+    let totalGB = 0; let freeGB = 0; let usedPercent = 0; let mount = '/';
+
+    if (process.platform === 'win32') {
+      try {
+        const raw = execSync('powershell -NoProfile -Command "Get-PSDrive C | Select-Object Used,Free | ConvertTo-Json"', { encoding: 'utf-8', timeout: 5_000 });
+        const ps = JSON.parse(raw);
+        const usedBytes = ps.Used ?? 0;
+        const freeBytes = ps.Free ?? 0;
+        totalGB = Math.round((usedBytes + freeBytes) / 1073741824 * 10) / 10;
+        freeGB = Math.round(freeBytes / 1073741824 * 10) / 10;
+        usedPercent = totalGB > 0 ? Math.round((usedBytes / (usedBytes + freeBytes)) * 100) : 0;
+        mount = 'C:';
+      } catch { /* */ }
+    } else {
+      try {
+        const raw = execSync('df -BM / 2>/dev/null | tail -1', { encoding: 'utf-8', timeout: 5_000 });
+        const parts = raw.split(/\s+/).filter(Boolean);
+        if (parts.length >= 5) {
+          mount = parts[0] ?? '/';
+          totalGB = Math.round((parseInt(parts[1] ?? '0', 10) / 1024) * 10) / 10;
+          freeGB = Math.round((parseInt(parts[3] ?? '0', 10) / 1024) * 10) / 10;
+          usedPercent = parseInt(parts[4]?.replace('%', '') ?? '0', 10);
+        }
+      } catch { /* */ }
+    }
+
+    const usedGB = Math.round((totalGB - freeGB) * 10) / 10;
+    const severity = usedPercent > 95 ? 'crítico' : usedPercent > 85 ? 'bajo' : 'ok';
+
+    return {
+      success: true,
+      message: severity === 'ok'
+        ? `Disco ${mount}: ${freeGB} GB libres / ${totalGB} GB (${usedPercent}% usado)`
+        : `Disco ${mount}: ${freeGB} GB libres / ${totalGB} GB (${usedPercent}% usado) — espacio ${severity}`,
+      details: { mount, totalGB, freeGB, usedGB, usedPercent, severity },
+    };
+  } catch (error) {
+    return { success: false, message: `No se pudo verificar el disco: ${error instanceof Error ? error.message : String(error)}` };
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // PRIVATE EXECUTOR MAP — all executors are internal
 // ═══════════════════════════════════════════════════════════════════
@@ -301,6 +347,7 @@ const PRIVATE_EXECUTOR_MAP: Record<string, ActionExecutor> = {
   'list-processes': execListProcesses,
   'check-system-temp': execCheckSystemTemp,
   'check-network': execCheckNetwork,
+  'check-disk-space': execCheckDiskSpace,
 };
 
 // ═══════════════════════════════════════════════════════════════════

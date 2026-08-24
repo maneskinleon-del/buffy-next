@@ -11,6 +11,7 @@ import { listProcesses } from './catalog/list-processes.js';
 import { installTool } from './catalog/install-tool.js';
 import { checkShizuku } from './catalog/check-shizuku.js';
 import { checkNetwork } from './catalog/check-network.js';
+import { checkDiskSpace } from './catalog/check-disk-space.js';
 
 const ALL_ACTIONS: ActionDefinition[] = [
   checkGpuDriver,
@@ -21,6 +22,7 @@ const ALL_ACTIONS: ActionDefinition[] = [
   changePowerPlan,
   checkShizuku,
   checkNetwork,
+  checkDiskSpace,
 ];
 
 export function getAllActions(): ActionDefinition[] {
@@ -51,7 +53,7 @@ const CATEGORY_TO_ACTIONS: Record<ObservationCategory, string[]> = {
   temperature: ['check-system-temp'],
   processes: ['list-processes'],
   memory: ['list-processes'],
-  storage: [],
+  storage: ['check-disk-space'],
   network: ['check-network'],
 };
 

@@ -48,6 +48,9 @@ export class ActionPlanner {
       case 'check-network':
         return 'Verificar conectividad IP, resolución DNS y gateway por defecto';
 
+      case 'check-disk-space':
+        return 'Analizar uso de espacio en el volumen principal y reportar si está bajo';
+
       default:
         return null;
     }

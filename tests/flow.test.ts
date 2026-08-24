@@ -207,4 +207,40 @@ describe('Full flow: doctor → detect → propose → confirm', () => {
     expect(ids).toContain('check-system-temp');
     expect(ids).toContain('list-processes');
   });
+
+  // ─── check-disk-space ──────────────────────────────────────
+
+  it('check-disk-space metadata is correct', () => {
+    const action = findActionById('check-disk-space');
+    expect(action).toBeDefined();
+    expect(action!.id).toBe('check-disk-space');
+    expect(action!.level).toBe('auto_safe');
+    expect(action!.platforms).toContain('linux');
+    expect(action!.platforms).toContain('windows');
+    expect(action!.platforms).toContain('android-termux');
+  });
+
+  it('check-disk-space is in getAllActions', () => {
+    const all = getAllActions();
+    const ids = all.map(a => a.id);
+    expect(ids).toContain('check-disk-space');
+  });
+
+  it('check-disk-space is suggested for storage observations with warning', () => {
+    const observations = [
+      { fact: 'Disco /: 5 GB libres / 100 GB', category: 'storage' as const, severity: 'warning' as const },
+    ];
+    const suggested = findActionsForIssue(observations, 'linux');
+    const ids = suggested.map(s => s.action.id);
+    expect(ids).toContain('check-disk-space');
+  });
+
+  it('check-disk-space is NOT suggested when severity is ok', () => {
+    const observations = [
+      { fact: 'Disco /: 200 GB libres / 500 GB', category: 'storage' as const, severity: 'ok' as const },
+    ];
+    const suggested = findActionsForIssue(observations, 'linux');
+    const ids = suggested.map(s => s.action.id);
+    expect(ids).not.toContain('check-disk-space');
+  });
 });
