@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { runDoctor } from '../src/core/doctor.js';
 import { requiresAuth, isForbidden, classifyAction } from '../src/core/security.js';
-import { findActionById, findActionsForIssue } from '../src/actions/registry.js';
+import { findActionById, findActionsForIssue, getAllActions } from '../src/actions/registry.js';
 import { buildExecutionPlan } from '../src/core/executor.js';
 import type { PlatformAdapter, SystemInfo, PlatformInfo, Capability, ActionDefinition } from '../src/core/types.js';
 
@@ -130,5 +130,31 @@ describe('Full flow: doctor → detect → propose → confirm', () => {
     expect(action).toBeDefined();
     expect(action!.id).toBe('check-gpu-driver');
     expect(action!.name).toBe('Verificar driver de GPU');
+  });
+
+  it('should find check-network by id', () => {
+    const action = findActionById('check-network');
+    expect(action).toBeDefined();
+    expect(action!.id).toBe('check-network');
+    expect(action!.name).toBe('Verificar estado de red');
+    expect(action!.level).toBe('auto_safe');
+    expect(action!.platforms).toContain('linux');
+    expect(action!.platforms).toContain('windows');
+    expect(action!.platforms).toContain('android-termux');
+  });
+
+  it('check-network should be in getAllActions', () => {
+    const all = getAllActions();
+    const ids = all.map(a => a.id);
+    expect(ids).toContain('check-network');
+  });
+
+  it('check-network should be suggested for network observations with warning severity', () => {
+    const observations = [
+      { fact: 'Conectividad de red con problemas', category: 'network' as const, severity: 'warning' as const },
+    ];
+    const suggested = findActionsForIssue(observations, 'linux');
+    const ids = suggested.map(s => s.action.id);
+    expect(ids).toContain('check-network');
   });
 });

@@ -45,10 +45,19 @@ describe('Check Selector', () => {
     expect(checks).toContain('ram');
   });
 
-  it('should match network-related keywords to available checks', () => {
+  it('should match network-related keywords to network check', () => {
     const checks = selectChecks('no funciona el wifi');
-    // network check not implemented, but wifi query triggers storage+processes
-    expect(checks.length).toBeGreaterThan(0);
+    expect(checks).toContain('network');
+  });
+
+  it('should match internet keywords to network check', () => {
+    const checks = selectChecks('no tengo internet');
+    expect(checks).toContain('network');
+  });
+
+  it('should match dns keywords to network check', () => {
+    const checks = selectChecks('el DNS no resuelve');
+    expect(checks).toContain('network');
   });
 
   it('should match process keywords', () => {

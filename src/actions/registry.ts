@@ -10,6 +10,7 @@ import { checkGpuDriver } from './catalog/check-gpu-driver.js';
 import { listProcesses } from './catalog/list-processes.js';
 import { installTool } from './catalog/install-tool.js';
 import { checkShizuku } from './catalog/check-shizuku.js';
+import { checkNetwork } from './catalog/check-network.js';
 
 const ALL_ACTIONS: ActionDefinition[] = [
   checkGpuDriver,
@@ -19,6 +20,7 @@ const ALL_ACTIONS: ActionDefinition[] = [
   installTool,
   changePowerPlan,
   checkShizuku,
+  checkNetwork,
 ];
 
 export function getAllActions(): ActionDefinition[] {
@@ -50,6 +52,7 @@ const CATEGORY_TO_ACTIONS: Record<ObservationCategory, string[]> = {
   processes: ['list-processes'],
   memory: ['list-processes'],
   storage: [],
+  network: ['check-network'],
 };
 
 export function findActionsForIssue(

@@ -217,6 +217,64 @@ const execCheckSystemTemp: ActionExecutor = async (): Promise<ActionResult> => {
   }
 };
 
+// ─── check-network ───────────────────────────────────────
+
+const execCheckNetwork: ActionExecutor = async (): Promise<ActionResult> => {
+  try {
+    const { execSync } = await import('child_process');
+    const results: { check: string; ok: boolean; detail: string }[] = [];
+
+    // 1. Ping connectivity (3 packets, short timeout)
+    try {
+      const target = process.platform === 'win32' ? '8.8.8.8' : '8.8.8.8';
+      const countFlag = process.platform === 'win32' ? '-n 3' : '-c 3';
+      execSync(`ping ${countFlag} -W 2 ${target}`, { encoding: 'utf-8', timeout: 10_000 });
+      results.push({ check: 'ping', ok: true, detail: 'Conectividad IP funciona (8.8.8.8)' });
+    } catch {
+      results.push({ check: 'ping', ok: false, detail: 'No se pudo hacer ping a 8.8.8.8' });
+    }
+
+    // 2. DNS resolution
+    try {
+      if (process.platform === 'win32') {
+        execSync('nslookup google.com', { encoding: 'utf-8', timeout: 5_000 });
+      } else {
+        execSync('nslookup google.com 2>/dev/null || host google.com 2>/dev/null', { encoding: 'utf-8', timeout: 5_000 });
+      }
+      results.push({ check: 'dns', ok: true, detail: 'Resolución DNS funciona (google.com)' });
+    } catch {
+      results.push({ check: 'dns', ok: false, detail: 'No se pudo resolver google.com' });
+    }
+
+    // 3. Default gateway
+    try {
+      let gateway = '';
+      if (process.platform === 'win32') {
+        gateway = execSync('ipconfig | findstr /i "Default Gateway"', { encoding: 'utf-8', timeout: 5_000 }).trim();
+      } else {
+        gateway = execSync('ip route show default 2>/dev/null | head -1', { encoding: 'utf-8', timeout: 5_000 }).trim();
+      }
+      const hasGateway = gateway.length > 0 && !gateway.includes('0.0.0.0');
+      results.push({ check: 'gateway', ok: hasGateway, detail: hasGateway ? `Gateway: ${gateway}` : 'No se detectó gateway por defecto' });
+    } catch {
+      results.push({ check: 'gateway', ok: false, detail: 'No se pudo detectar gateway' });
+    }
+
+    const failed = results.filter(r => !r.ok);
+    const ok = failed.length === 0;
+
+    return {
+      success: true,
+      message: ok
+        ? 'Red funcionando correctamente (ping + DNS + gateway OK)'
+        : `Problemas de red detectados: ${failed.map(f => f.detail).join('; ')}`,
+      details: { results, ok, failed: failed.length },
+    };
+  } catch (error) {
+    return { success: false, message: `Error verificando red: ${error instanceof Error ? error.message : String(error)}` };
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // PRIVATE EXECUTOR MAP — all executors are internal
 // ═══════════════════════════════════════════════════════════════════
@@ -229,6 +287,7 @@ const PRIVATE_EXECUTOR_MAP: Record<string, ActionExecutor> = {
   'check-driver-status': execCheckDriverStatus,
   'list-processes': execListProcesses,
   'check-system-temp': execCheckSystemTemp,
+  'check-network': execCheckNetwork,
 };
 
 // ═══════════════════════════════════════════════════════════════════

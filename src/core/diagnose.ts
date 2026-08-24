@@ -80,7 +80,7 @@ export async function diagnose(
 
 /** Checks that analyzeForQuery can actually observe */
 const OBSERVABLE_CHECKS = new Set([
-  'cpu', 'ram', 'gpu', 'storage', 'temperature', 'processes',
+  'cpu', 'ram', 'gpu', 'storage', 'temperature', 'processes', 'network',
 ]);
 
 function computeObservability(
@@ -220,6 +220,17 @@ function analyzeForQuery(
         message: 'Sin procesos anómalos detectados',
       });
     }
+  }
+
+  if (checks.includes('network')) {
+    // Network check is informational — adapter reports what it can observe.
+    // No real-time connectivity test here; that would be an action, not a check.
+    items.push({
+      id: 'network-status',
+      severity: 'ok',
+      category: 'Red',
+      message: 'Verificación de red solicitada — ejecuta `buffy act check-network` para diagnóstico detallado',
+    });
   }
 
   return items;

@@ -90,7 +90,8 @@ export type CheckName =
   | 'gpu'
   | 'temperature'
   | 'processes'
-  | 'storage';
+  | 'storage'
+  | 'network';
 
 /**
  * Closed set of observation categories.
@@ -103,7 +104,8 @@ export type ObservationCategory =
   | 'gpu'
   | 'temperature'
   | 'processes'
-  | 'storage';
+  | 'storage'
+  | 'network';
 
 // ─── Actions (metadata only — no execute/dryRun/rollback/verify) ──
 

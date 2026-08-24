@@ -24,7 +24,7 @@ const DEFAULT_DIAGNOSTIC_CHECKS: CheckName[] = [
  */
 const SPECIFIC_PATTERNS: Array<{ pattern: RegExp; checks: CheckName[] }> = [
   // Network
-  { pattern: /internet|red|wifi|conexi[oó]n|network|dns/i, checks: ['storage', 'processes'] },
+  { pattern: /internet|red|wifi|conexi[oó]n|network|dns/i, checks: ['network'] },
   // Storage
   { pattern: /disco|lleno|almacenamiento|space|espacio|almacen/i, checks: ['storage'] },
   // Temperature (specific — includes "ventilador", "ruge")

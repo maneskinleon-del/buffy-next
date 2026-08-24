@@ -45,6 +45,9 @@ export class ActionPlanner {
       case 'check-system-temp':
         return 'Leer la temperatura actual del CPU y reportar si está dentro de rango';
 
+      case 'check-network':
+        return 'Verificar conectividad IP, resolución DNS y gateway por defecto';
+
       default:
         return null;
     }
