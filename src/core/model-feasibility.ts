@@ -135,6 +135,10 @@ function checkRAM(
   const available = system.memory.availableGB;
   const required = model.estimatedRamGB;
 
+  if (available === null) {
+    return { level: 'fit', reason: 'RAM data unavailable' };
+  }
+
   if (available >= required * FIT_RAM_MULTIPLIER) {
     return { level: 'fit', reason: '' };
   }
@@ -229,9 +233,6 @@ function createExecutionLimits(
   model: ModelSpec,
   system: SystemInfo,
 ): ExecutionLimits {
-  // Reduce context based on available RAM
-  const availableGB = system.memory.availableGB;
-  const contextReduction = Math.floor(availableGB / model.estimatedRamGB);
   const maxContext = Math.min(
     model.maxContext,
     Math.floor(model.maxContext * 0.7), // Max 70% of model's max context
