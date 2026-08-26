@@ -1,0 +1,7 @@
+Ignoring --allowedTools rule "/proc/*)": Wildcard tool name "/proc/*)" is not supported in allow rules. An allow pattern must name the scope it widens — globs are permitted only in the tool position after a literal mcp__<server>__ prefix. Deny and ask rules accept wildcards anywhere.
+"minimax/minimax-m3:free" is not a model this version of Claude Code recognizes, so auto-compact will keep this session within 200k tokens (the context window it assumes). If the model accepts more, append [1m] to the model name for 1M, or set CLAUDE_CODE_MAX_CONTEXT_TOKENS to its real window; to make it recognized, map it in the modelOverrides setting or update Claude Code; CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1 restores the previous wait-for-the-API behavior.
+[claude-code:unrecognized_model] {"model":"minimax/minimax-m3:free","query_source":"sdk"}
+- **Kernel:** Linux **6.18.45-2-lts** (la rama `-lts` indica que es la variante de soporte a largo plazo).
+- **SO:** Linux genérico, sin más detalles detectables desde el entorno actual; la convención de nomenclatura `X.Y.Z-N-lts` es la que usa **Arch Linux** para sus kernels LTS empaquetados, así que es muy probable que la distribución sea Arch (o un derivado que reuse ese mismo esquema de versionado de kernel), aunque no se puede confirmar sin leer `/etc/os-release` o similar.
+
+Si quieres una identificación más precisa (distribuidor, versión exacta, init system…), dímelo y ejecuto los comandos correspondientes.

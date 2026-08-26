@@ -1,0 +1,73 @@
+[
+  {
+    "id": "W1",
+    "query": "Mi Teams se cierra solo cuando estoy en una reunión.",
+    "buffy": {
+      "checks": [],
+      "obs": 0,
+      "actions": 0,
+      "obs_status": "no_evidence"
+    },
+    "modeA": "Entiendo tu problema. Si estás en una reunión y tu Teams se cierra, es posible que no tengas acceso a los canales de comunicación.\n\nPara resolver este problema, verifica lo siguiente:\n\n* Asegúrate de estar conectado a internet.\n* Asegúrate de estar en una reunión activa.\n* Si estás en una reunión y ves un botón de cierre en el Teams, asegúrate de presionarlo.\n* Si la reunión está en un formato de video, verifica si el video está funcionando correctamente.\n* Si la reunión está en un formato de chat, verifica si estás conectado a la aplicación de chat.\n\nSi aún persistes con el problema, contacta al soporte técnico de Microsoft.",
+    "modeC": "El mensaje indica que la consulta no proporciona suficiente información para determinar el motivo de la cierre del Teams. El estado 'no_evidence' en 'observability.status' significa que no se encontraron patrones o pruebas que sugieran un problema con la conexión o el estado de la reunión.\n\nPor lo tanto, la respuesta es:\n\n**El Teams se cierra solo cuando estoy en una reunión.**"
+  },
+  {
+    "id": "L2",
+    "query": "El wifi dice conectado pero no cargo ninguna página.",
+    "buffy": {
+      "checks": [
+        "network",
+        "os"
+      ],
+      "obs": 0,
+      "actions": 0,
+      "obs_status": "unsupported"
+    },
+    "modeA": "Entiendo tu problema. Primero, verifica si tu dispositivo está conectado a internet. Si está conectado, verifica si la página web que deseas cargar está accesible. Si la página está accesible, verifica si hay algún error en el navegador o en el dispositivo. Si no puedes resolver el problema, contacta al soporte técnico de tu navegador o del proveedor de internet.",
+    "modeC": "El wifi está conectado, pero no carga ninguna página. Esto puede ser causado por diferentes motivos, como un problema con el acceso a internet, un problema con el router o un problema con el navegador."
+  },
+  {
+    "id": "A3",
+    "query": "No puedo actualizar apps porque dice almacenamiento lleno.",
+    "buffy": {
+      "checks": [
+        "storage",
+        "processes"
+      ],
+      "obs": 2,
+      "actions": 2,
+      "obs_status": "observed"
+    },
+    "modeA": "Entiendo tu problema. Si tu almacenamiento está lleno, no podrás actualizar las aplicaciones. \n\n¿Hay alguna aplicación en particular que esté ocupando demasiado espacio?",
+    "modeC": "El usuario está teniendo problemas para actualizar aplicaciones porque el disco está lleno. \n\nEl análisis muestra que el disco está con 230 GB de espacio libre y solo tiene 500 GB de espacio disponible. \n\nEl sistema está tomando medidas para evitar actualizar las aplicaciones, pero parece que esto no está suficiente."
+  },
+  {
+    "id": "X3",
+    "query": "No puedo conectarme a la wifi en ningún dispositivo.",
+    "buffy": {
+      "checks": [
+        "network",
+        "os"
+      ],
+      "obs": 0,
+      "actions": 0,
+      "obs_status": "unsupported"
+    },
+    "modeA": "Entiendo tu problema. Intenta reinstalar el servicio de red o contactar al soporte técnico de tu proveedor de internet.",
+    "modeC": "El dispositivo no está conectado a la red WiFi. El adapter \"network\" y \"os\" no son observables por el dispositivo."
+  },
+  {
+    "id": "X5",
+    "query": "El mouse se mueve solo y además la pantalla parpadea.",
+    "buffy": {
+      "checks": [
+        "gpu"
+      ],
+      "obs": 1,
+      "actions": 0,
+      "obs_status": "observed"
+    },
+    "modeA": "Entiendo tu problema. El movimiento del mouse y la pantalla parpadea son síntomas separados que pueden indicar diferentes problemas.\n\n* **Movimiento del mouse:** Si el movimiento del mouse es rápido o irregular, puede estar mal configurado o tener un problema con la conexión.\n* **Pantalla parpadea:** Si la pantalla parpadea de forma rápida o irregular, puede ser un problema con el brillo, el contraste o la configuración de la pantalla.\n\nRecomendaría que revises la configuración del mouse y la pantalla para asegurarte de que están configuradas correctamente. Si el problema persiste, busca asistencia al soporte técnico de la marca de la pantalla o del equipo técnico de la computadora.",
+    "modeC": "El mouse se mueve solo, lo que sugiere un problema con la conexión o comunicación con el hardware. Si la observación \"parpadea\" indica un problema con la visualización, también, la posibilidad de un problema con el hardware lo confirma."
+  }
+]

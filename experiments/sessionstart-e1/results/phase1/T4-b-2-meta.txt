@@ -1,0 +1,9 @@
+variant: b
+variant_name: semantic
+task: T4
+run: 2
+model: gemma4:cloud
+context_bytes: 547
+latency_ms: 1210
+timestamp: 2026-08-26T17:13:40-04:00
+status: OK

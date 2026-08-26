@@ -1,0 +1,50 @@
+    *   Guide: "Here is how you can check it yourself."
+...done thinking.
+Lo siento, pero **no tengo acceso directo al hardware de tu computadora**.
+Como soy una inteligencia artificial que se ejecuta en servidores remotos (
+(en la nube), no puedo "ver" ni escanear los componentes físicos de la máqu
+máquina desde la cual me estás escribiendo. No tengo permisos para ejecutar
+ejecutar comandos en tu sistema operativo ni acceder a tu Administrador de 
+Dispositivos.
+Sin embargo, **puedo enseñarte cómo averiguarlo tú mismo** y cómo interpret
+interpretar los resultados para saber si el driver es genérico o específico
+específico.
+### Cómo averiguar qué GPU tienes y qué driver usa:
+#### 1. En Windows:
+*   **Opción rápida (Administrador de Tareas):**
+    1. Presiona `Ctrl + Shift + Esc`.
+    2. Ve a la pestaña **Rendimiento**.
+    3. En la columna de la izquierda, busca **GPU**. Ahí verás el nombre de
+del modelo (ej. *NVIDIA GeForce RTX 3060* o *Intel UHD Graphics*).
+*   **Opción detallada (Administrador de Dispositivos):**
+    1. Haz clic derecho en el botón de Inicio y selecciona **Administrador 
+de dispositivos**.
+    2. Despliega la sección **Adaptadores de pantalla**.
+#### 2. En Linux:
+*   Abre una terminal y escribe:
+    `lspci | grep -i vga` o `glxinfo | grep "OpenGL renderer"`
+#### 3. En macOS:
+*   Haz clic en el icono de Apple () $\rightarrow$ **Acerca de este Mac**.
+Mac**.
+---
+### ¿Cómo saber si el driver es Genérico o Específico?
+Una vez que encuentres el nombre en el **Administrador de Dispositivos** (e
+(en Windows), fíjate en lo siguiente:
+*   **Es un Driver GENÉRICO si dice:**
+    *   *"Microsoft Basic Display Adapter"* (Adaptador de pantalla básico d
+de Microsoft).
+    *   *"Standard VGA Graphics Adapter"*.
+    *   **Justificación:** Estos nombres indican que el sistema operativo e
+está usando un controlador básico solo para dar imagen, pero no aprovecha l
+la potencia de la tarjeta (no hay aceleración 3D, el brillo podría no funci
+funcionar, etc.).
+*   **Es un Driver ESPECÍFICO si dice:**
+    *   El nombre exacto del fabricante y modelo, por ejemplo: *"NVIDIA GeF
+GeForce RTX 4070"*, *"AMD Radeon RX 6800"* o *"Intel Iris Xe Graphics"*.
+    *   **Justificación:** Si aparece el modelo comercial, significa que el
+el sistema ha reconocido la pieza de hardware y ha instalado el controlador
+controlador diseñado específicamente por el fabricante para optimizar el re
+rendimiento.
+**Si quieres, puedes decirme qué nombre te aparece en el Administrador de D
+Dispositivos y yo te confirmaré si es el driver correcto o si necesitas act
+actualizarlo.**

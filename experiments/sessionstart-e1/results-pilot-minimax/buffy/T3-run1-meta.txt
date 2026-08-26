@@ -1,0 +1,8 @@
+condition: buffy
+task: T3
+run: run1
+model: minimax/minimax-m3:free
+rc: 0
+latency_ms: 14734
+retries: 0
+finished_at: 2026-08-25T18:48:28-04:00

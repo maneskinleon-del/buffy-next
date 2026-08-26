@@ -1,0 +1,8 @@
+condition: buffy
+task: T5
+run: 10
+model: gemma4:cloud
+rc: 0
+latency_ms: 6356
+retries: 0
+finished_at: 2026-08-26T14:59:27-04:00

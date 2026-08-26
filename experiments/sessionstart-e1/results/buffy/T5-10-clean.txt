@@ -1,0 +1,50 @@
+    *   **Disco al 100%:** Es el síntoma clásico de un disco duro mecánico 
+(HDD) muriendo o de un proceso de actualización de Windows/Antivirus indexa
+indexando archivos en segundo plano.
+### 2. Los "Pasajeros Clandestinos": Programas de Inicio
+**Qué revisar:** En el Administrador de Tareas, ve a la pestaña **"Inicio"*
+**"Inicio"** y deshabilita todo lo que no sea estrictamente necesario.
+*   **Por qué:** Muchas aplicaciones (Spotify, Steam, Cortana, Teams, Adobe
+Adobe, etc.) se configuran para arrancar solas al encender el equipo. Aunqu
+Aunque no las veas abiertas, consumen RAM y ciclos de CPU constantemente, r
+ralentizando la respuesta general del sistema.
+### 3. El "Espacio para Respirar": Almacenamiento del Disco
+**Qué revisar:** Mira cuánto espacio libre queda en tu unidad principal (C:
+(C:). Si la barra está en rojo (menos del 10-15% libre), tienes un problema
+problema.
+*   **Por qué:** Los sistemas operativos necesitan espacio libre para crear
+crear "archivos temporales" y "memoria virtual". Si el disco está lleno, el
+el sistema no tiene donde escribir esos datos temporales y el rendimiento c
+cae en picado. Especialmente en los SSD, el rendimiento baja drásticamente 
+cuando están casi llenos.
+### 4. La "Fiebre": Temperatura y Ventilación
+**Qué revisar:** ¿El ventilador suena como una turbina de avión? ¿El equipo
+equipo está caliente al tacto? Puedes usar software gratuito como *HWMonito
+*HWMonitor* para ver los grados.
+*   **Por qué:** Se llama **Thermal Throttling**. Cuando el procesador alca
+alcanza una temperatura crítica, el sistema reduce automáticamente su veloc
+velocidad (potencia) para evitar que el chip se queme. Si hay polvo en los 
+ventiladores o la pasta térmica está seca, el PC irá lento para no morir.
+### 5. La "Salud Digital": Malware y Actualizaciones
+**Qué revisar:** Pasa un escaneo con Windows Defender o Malwarebytes y revi
+revisa si hay actualizaciones de sistema pendientes.
+*   **Por qué:** Un proceso de actualización "colgado" en segundo plano pue
+puede consumir recursos sin que te des cuenta. Por otro lado, el malware a 
+menudo utiliza tu hardware para tareas ocultas, robándote rendimiento.
+---
+### Resumen de diagnóstico rápido:
+| Si notas que... | Lo más probable es que sea... | Acción inmediata |
+| :--- | :--- | :--- |
+| Tarda mucho en encender | Apps de inicio o HDD lento | Deshabilitar apps 
+de inicio / Cambiar a SSD |
+| Se congela al abrir muchas pestañas | Falta de memoria RAM | Cerrar proce
+procesos o ampliar RAM |
+| Va lento después de 1 hora de uso | Sobrecalentamiento | Limpiar ventilad
+ventiladores / Cambiar pasta térmica |
+| Todo el sistema responde lento y "pesado" | Disco lleno o Malware | Borra
+Borrar temporales / Escaneo de virus |
+**¿Qué me recomendarías decirme ahora para ayudarte mejor?**
+Si puedes decirme:
+1. ¿Es portátil o sobremesa?
+2. ¿Tiene disco SSD o HDD (mecánico)?
+3. ¿Cuándo notas más la lentitud (al arrancar, al navegar, al jugar...)?

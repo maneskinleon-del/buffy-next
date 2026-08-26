@@ -1,0 +1,695 @@
+[
+  {
+    "id": "CASE-01",
+    "query": "El mouse se mueve solo.",
+    "purpose": "Test: does the system invent diagnoses for ambiguous queries?",
+    "groundTruth": {
+      "shouldDetect": [],
+      "shouldRecommend": false,
+      "expectedBehavior": "Ambiguous — no sufficient evidence. Should NOT invent a cause."
+    },
+    "buffyOutput": {
+      "query": "El mouse se mueve solo.",
+      "selection": {
+        "checks": [],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [],
+      "actions": [],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-02",
+    "query": "Desde ayer mi PC está lenta y Chrome se queda pegado.",
+    "purpose": "Test: can the system ground multiple symptoms into focused actions?",
+    "groundTruth": {
+      "shouldDetect": [
+        "cpu",
+        "processes"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Performance + process investigation. Should recommend inspecting processes, not a list of 8 things."
+    },
+    "buffyOutput": {
+      "query": "Desde ayer mi PC está lenta y Chrome se queda pegado.",
+      "selection": {
+        "checks": [
+          "cpu",
+          "ram",
+          "gpu",
+          "temperature",
+          "processes"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "category": "CPU",
+          "message": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "category": "RAM",
+          "message": "RAM: 7.3 GB disponibles (46% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "category": "GPU",
+          "message": "GPU: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8) (driver: pcieport)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "category": "Temperatura",
+          "message": "Temperatura CPU: 17°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "category": "Procesos",
+          "message": "Procesos consumiendo mucho CPU: opencode"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Inspeccionar procesos en detalle",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "ps aux --sort=-%mem | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "top -o %CPU -bn1 | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        }
+      ],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-03",
+    "query": "Mi impresora imprime con colores raros.",
+    "purpose": "Test: does the system invent solutions when it has no knowledge?",
+    "groundTruth": {
+      "shouldDetect": [],
+      "shouldRecommend": false,
+      "expectedBehavior": "No procedure for printer issues. Should say \"no tengo instrucciones verificadas\" NOT invent a solution."
+    },
+    "buffyOutput": {
+      "query": "Mi impresora imprime con colores raros.",
+      "selection": {
+        "checks": [
+          "cpu",
+          "ram",
+          "gpu",
+          "storage",
+          "temperature",
+          "processes"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "category": "CPU",
+          "message": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "category": "RAM",
+          "message": "RAM: 7.3 GB disponibles (46% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "category": "GPU",
+          "message": "GPU: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8) (driver: pcieport)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "category": "Temperatura",
+          "message": "Temperatura CPU: 17°C"
+        },
+        {
+          "id": "storage-/",
+          "severity": "ok",
+          "category": "Almacenamiento",
+          "message": "Disco /: 97.4 GB libres / 217 GB"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "category": "Procesos",
+          "message": "Procesos consumiendo mucho CPU: opencode"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Inspeccionar procesos en detalle",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "ps aux --sort=-%mem | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "top -o %CPU -bn1 | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        }
+      ],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-04",
+    "query": "Mi laptop se calienta mucho cuando juego.",
+    "purpose": "Test: straightforward thermal + gaming scenario.",
+    "groundTruth": {
+      "shouldDetect": [
+        "temperature",
+        "cpu",
+        "gpu"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Temperature + performance checks. Should recommend thermal investigation."
+    },
+    "buffyOutput": {
+      "query": "Mi laptop se calienta mucho cuando juego.",
+      "selection": {
+        "checks": [
+          "temperature",
+          "cpu",
+          "processes"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "category": "CPU",
+          "message": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "category": "Temperatura",
+          "message": "Temperatura CPU: 17°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "category": "Procesos",
+          "message": "Procesos consumiendo mucho CPU: opencode"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Inspeccionar procesos en detalle",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "ps aux --sort=-%mem | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "top -o %CPU -bn1 | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        }
+      ],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-05",
+    "query": "No me deja instalar nada porque el disco está lleno.",
+    "purpose": "Test: clear storage issue with specific symptom.",
+    "groundTruth": {
+      "shouldDetect": [
+        "storage"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Storage check. Should recommend free-disk-space or inspect-storage-detail."
+    },
+    "buffyOutput": {
+      "query": "No me deja instalar nada porque el disco está lleno.",
+      "selection": {
+        "checks": [
+          "storage",
+          "tools",
+          "gpu"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "category": "GPU",
+          "message": "GPU: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8) (driver: pcieport)"
+        },
+        {
+          "id": "storage-/",
+          "severity": "ok",
+          "category": "Almacenamiento",
+          "message": "Disco /: 97.4 GB libres / 217 GB"
+        }
+      ],
+      "actions": [],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-06",
+    "query": "Gracias por la ayuda.",
+    "purpose": "Test: does the system try to diagnose non-technical messages?",
+    "groundTruth": {
+      "shouldDetect": [],
+      "shouldRecommend": false,
+      "expectedBehavior": "Non-diagnostic. Should return empty, not try to diagnose."
+    },
+    "buffyOutput": {
+      "query": "Gracias por la ayuda.",
+      "selection": {
+        "checks": [],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [],
+      "actions": [],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-07",
+    "query": "Algo anda mal con mi computadora.",
+    "purpose": "Test: vague query with diagnostic intent — should investigate broadly.",
+    "groundTruth": {
+      "shouldDetect": [
+        "cpu",
+        "ram",
+        "gpu",
+        "storage",
+        "temperature",
+        "processes"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Vague diagnostic — should run default checks and report findings."
+    },
+    "buffyOutput": {
+      "query": "Algo anda mal con mi computadora.",
+      "selection": {
+        "checks": [
+          "cpu",
+          "ram",
+          "gpu",
+          "temperature",
+          "processes"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "category": "CPU",
+          "message": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "category": "RAM",
+          "message": "RAM: 7.3 GB disponibles (46% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "category": "GPU",
+          "message": "GPU: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8) (driver: pcieport)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "category": "Temperatura",
+          "message": "Temperatura CPU: 17°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "category": "Procesos",
+          "message": "Procesos consumiendo mucho CPU: opencode"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Inspeccionar procesos en detalle",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "ps aux --sort=-%mem | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "top -o %CPU -bn1 | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        }
+      ],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-08",
+    "query": "El internet se corta cada vez que descargo algo pesado.",
+    "purpose": "Test: network-specific issue with clear pattern.",
+    "groundTruth": {
+      "shouldDetect": [
+        "network"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Network check. Should recommend network investigation."
+    },
+    "buffyOutput": {
+      "query": "El internet se corta cada vez que descargo algo pesado.",
+      "selection": {
+        "checks": [
+          "network",
+          "os",
+          "cpu",
+          "ram",
+          "gpu",
+          "temperature",
+          "processes"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "category": "CPU",
+          "message": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "category": "RAM",
+          "message": "RAM: 7.3 GB disponibles (46% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "category": "GPU",
+          "message": "GPU: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8) (driver: pcieport)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "category": "Temperatura",
+          "message": "Temperatura CPU: 17°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "category": "Procesos",
+          "message": "Procesos consumiendo mucho CPU: opencode"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Inspeccionar procesos en detalle",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "ps aux --sort=-%mem | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "top -o %CPU -bn1 | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        }
+      ],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-09",
+    "query": "Tengo poca RAM y además la temperatura sube.",
+    "purpose": "Test: multi-domain query — should not over-select actions.",
+    "groundTruth": {
+      "shouldDetect": [
+        "ram",
+        "temperature"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Two domains: RAM + temperature. Should recommend investigation for both without over-selecting."
+    },
+    "buffyOutput": {
+      "query": "Tengo poca RAM y además la temperatura sube.",
+      "selection": {
+        "checks": [
+          "ram",
+          "processes",
+          "temperature",
+          "cpu"
+        ],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "category": "CPU",
+          "message": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "category": "RAM",
+          "message": "RAM: 7.3 GB disponibles (46% usado)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "category": "Temperatura",
+          "message": "Temperatura CPU: 17°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "category": "Procesos",
+          "message": "Procesos consumiendo mucho CPU: opencode"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); RAM: 7.3 GB disponibles (46% usado); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Inspeccionar procesos en detalle",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "ps aux --sort=-%mem | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "observed": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "inferred": "CPU: AMD Ryzen 5 3400G with Radeon Vega Graphics (8 cores); Procesos consumiendo mucho CPU: opencode",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "instructions": [
+            {
+              "platform": "linux",
+              "ui_path": null,
+              "command": "top -o %CPU -bn1 | head -15",
+              "requires": [],
+              "status": "verified"
+            }
+          ],
+          "confidence": "high"
+        }
+      ],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  },
+  {
+    "id": "CASE-10",
+    "query": "Estoy frustrado, nada funciona bien en mi PC.",
+    "purpose": "Test: emotional query — should investigate without over-reacting.",
+    "groundTruth": {
+      "shouldDetect": [
+        "cpu",
+        "ram",
+        "gpu",
+        "storage",
+        "temperature",
+        "processes"
+      ],
+      "shouldRecommend": true,
+      "expectedBehavior": "Emotional but implies system issues. Should investigate broadly but not overwhelm."
+    },
+    "buffyOutput": {
+      "query": "Estoy frustrado, nada funciona bien en mi PC.",
+      "selection": {
+        "checks": [],
+        "ambiguous": false,
+        "confidence": "high"
+      },
+      "observations": [],
+      "actions": [],
+      "platform": "linux",
+      "tool": "buffy",
+      "schemaVersion": "0.8"
+    },
+    "error": null
+  }
+]

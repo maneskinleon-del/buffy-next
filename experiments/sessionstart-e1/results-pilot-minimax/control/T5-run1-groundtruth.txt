@@ -1,0 +1,18 @@
+captured_at: 2026-08-25T18:49:09-04:00
+condition: control  task: T5  run: run1
+--- uname ---
+Linux sabrewulf-a320ms2h 6.18.45-2-lts #1 SMP PREEMPT_DYNAMIC Fri, 21 Aug 2026 22:45:28 +0000 x86_64 GNU/Linux
+--- free (MB) ---
+               total       usado       libre  compartido   búf/caché  disponible
+Mem:           13891        4025        4234         849        6818        9865
+Inter:          4095          85        4010
+--- df / ---
+S.ficheros     Tamaño Usados  Disp Uso% Montado en
+/dev/sdb2        218G   118G   89G  57% /
+--- gpu ---
+07:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8)
+	Subsystem: Gigabyte Technology Co., Ltd Device d000
+	Kernel driver in use: amdgpu
+	Kernel modules: amdgpu
+--- temp ---
+edge:         +29.0°C  

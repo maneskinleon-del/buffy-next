@@ -1,0 +1,352 @@
+[
+  {
+    "id": "W1",
+    "query": "Mi Teams se cierra solo cuando estoy en una reunión.",
+    "platform": "windows",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo que tu Teams se cierra cuando estás en una reunión. ¿Qué tal la razón de esto?",
+    "modeC": "El sistema Buffy no tiene suficiente información para diagnosticar que el sistema se cierra solo cuando estás en una reunión. Por lo tanto, no puedo proporcionar un diagnóstico.",
+    "error": null
+  },
+  {
+    "id": "W2",
+    "query": "Windows me pide contraseña cada vez que prendo la PC, antes no lo hacía.",
+    "platform": "windows",
+    "buffyChecks": [
+      "cpu",
+      "ram",
+      "gpu",
+      "storage",
+      "temperature",
+      "processes"
+    ],
+    "buffyObsCount": 6,
+    "buffyActionsCount": 2,
+    "observability": {
+      "status": "observed",
+      "reason": "6 observaciones producidas de 6 checks seleccionados."
+    },
+    "modeA": "Entiendo tu problema. Windows puede pedir contraseña al iniciar el equipo si no se ha establecido un password predeterminado. \n\nVerifica si hay un password predeterminado establecido en tu cuenta de Windows. Si no lo hay, puedes establecer un nuevo password y luego volver a iniciar la PC.",
+    "modeC": "El sistema Buffy diagnosticó el sistema y encontró lo siguiente:\n\n**Observación:**\n- CPU: AMD Ryzen 5 3400G (4 cores)\n- RAM: 8 GB disponibles (50% usado)\n\n**Aspectos relevantes:**\n- El sistema está operativo y no presenta errores.\n- El sistema tiene procesos que consumen mucha CPU, lo que puede estar causando problemas.\n\n**Recomendaciones:**\n- Inspeccionar los procesos que consumen mucha CPU.\n- Cerrar procesos que estén utilizando demasiada CPU.\n\n**Consideraciones:**\n- El sistema no proporciona información sobre lasusus de la contraseña.\n- El sistema no proporciona información sobre los procesos que consumen mucha CPU.",
+    "error": null
+  },
+  {
+    "id": "W3",
+    "query": "No puedo imprimir desde Word pero sí desde PDF.",
+    "platform": "windows",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo que el usuario tiene un problema al imprimir desde Word, pero no funciona en PDF. \n\n¿Ha establecido la configuración de Word para imprimir en PDF?",
+    "modeC": "El sistema Buffy no pudo determinar la causa de la excepción. El resultado \"Consulta no diagnóstica o sin patrones reconocidos.\" indica que no hay información suficiente para diagnosticar el problema.",
+    "error": null
+  },
+  {
+    "id": "W4",
+    "query": "El explorador dice que el disco C está en rojo pero no tengo nada instalado.",
+    "platform": "windows",
+    "buffyChecks": [
+      "storage"
+    ],
+    "buffyObsCount": 1,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "observed",
+      "reason": "1 observaciones producidas de 1 checks seleccionados."
+    },
+    "modeA": "El explorador está intentando acceder al disco C, pero no hay ningún disco conectado. Se necesita instalar un disco antes de que el explorador pueda acceder a él.",
+    "modeC": "El explorador dice que el disco C está en rojo pero no tengo nada instalado. Por lo tanto, no puedo determinar si el sistema está funcionando correctamente.",
+    "error": null
+  },
+  {
+    "id": "W5",
+    "query": "El Bluetooth se conecta pero no suena nada por los audífonos.",
+    "platform": "windows",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo tu problema. Se conecta el Bluetooth pero no suena nada por los audífonos.\n\nPara resolver este problema, deberías verificar lo siguiente:\n\n* **Verifica que el Bluetooth esté activado en el teléfono.**\n* **Verifica que los audífonos estén conectados al teléfono.**\n* **Verifica que el volumen en el teléfono esté activado.**\n* **Verifica que los audífonos estén configurados para escuchar a Bluetooth.**\n* **Verifica la conexión a internet en el teléfono.**\n* **Si el problema persiste, verifica la versión de firmware de tu teléfono y de los audífonos.**",
+    "modeC": "El sistema Buffy no pudo determinar el motivo del problema con los audífonos. El estado de observabilidad es \"no_evidence\", lo que significa que no hay evidencia suficiente para respaldar una conclusión.\n\nPor lo tanto, no puedo proporcionar un diagnóstico específico.",
+    "error": null
+  },
+  {
+    "id": "L1",
+    "query": "Después de actualizar no me deja entrar a mi usuario.",
+    "platform": "linux",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo tu problema. Si no puedes acceder al usuario, es posible que haya un problema con el sistema o con el perfil del usuario.\n\nPara resolver el problema, verifica lo siguiente:\n\n* **Reintenta el usuario.**\n* **Reestablece el perfil del usuario.**\n* **Reinstala el sistema.**\n* **Consulta la documentación del software.**\n* **Comunica con el soporte técnico.**",
+    "modeC": "El sistema diagnosticó un error de acceso al usuario. El sistema no pudo identificar ningún patrón o información que sugiera un problema con el usuario.",
+    "error": null
+  },
+  {
+    "id": "L2",
+    "query": "El wifi dice conectado pero no cargo ninguna página.",
+    "platform": "linux",
+    "buffyChecks": [
+      "network",
+      "os"
+    ],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "unsupported",
+      "reason": "Checks seleccionados no son observables por el adapter: network, os.",
+      "unsupportedChecks": [
+        "network",
+        "os"
+      ]
+    },
+    "modeA": "Entiendo el problema. El wifi está conectado, pero no carga ninguna página. ¿Ha probado reiniciar el router o la conexión por cable?",
+    "modeC": "El sistema Buffy no puede observar el sistema en este estado. El estado `observability.status` indica que los checks seleccionados (`network` y `os`) no son observables por el adapter.",
+    "error": null
+  },
+  {
+    "id": "L3",
+    "query": "Quiero instalar Docker pero me dice que no tengo permisos.",
+    "platform": "linux",
+    "buffyChecks": [
+      "tools",
+      "gpu",
+      "permissions"
+    ],
+    "buffyObsCount": 1,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "partial",
+      "reason": "Algunos checks no son observables: tools, permissions.",
+      "unsupportedChecks": [
+        "tools",
+        "permissions"
+      ]
+    },
+    "modeA": "Entiendo que necesitas instalar Docker pero te dice que no tienes permisos. \n\nPara instalar Docker, necesitas tener permisos de raíz en tu sistema. Esto significa que puedes ejecutar comandos como `sudo`.\n\nSi no tienes permisos de raíz, puedes intentar instalar Docker con un usuario que tenga permisos de raíz, o puedes usar un método alternativo de instalación, como la instalación a través de un canal de paquetes.",
+    "modeC": "El sistema Buffy no tiene suficiente información para diagnosticar el problema con los permisos de Docker. \n\n**Observación:**\n- `permissions` no está presente en la selección.\n\n**Por lo tanto:**\nNo puedo determinar si los permisos de Docker están funcionando correctamente.",
+    "error": null
+  },
+  {
+    "id": "L4",
+    "query": "Mi laptop se apaga cuando la desconecto de la luz, la batería debería funcionar.",
+    "platform": "linux",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo tu problema. La batería no debería apagar tu laptop cuando la desconecta la luz.\n\n¿Ha realizado alguna configuración o actualización recientemente?",
+    "modeC": "El sistema diagnosticó que el problema con tu laptop está relacionado con la desconexión de la luz y la función de la batería. La observación \"Mi laptop se apaga cuando la desconecto de la luz, la batería debería funcionar\" es valida, por lo tanto, se puede concluir que la batería no está funcionando correctamente.",
+    "error": null
+  },
+  {
+    "id": "L5",
+    "query": "La pantalla parpadea cada vez que abro una app gráfica.",
+    "platform": "linux",
+    "buffyChecks": [
+      "gpu",
+      "processes"
+    ],
+    "buffyObsCount": 2,
+    "buffyActionsCount": 2,
+    "observability": {
+      "status": "observed",
+      "reason": "2 observaciones producidas de 2 checks seleccionados."
+    },
+    "modeA": "Entiendo el problema. La pantalla parpadea cuando abres una aplicación gráfica. ¿Qué tipo de aplicaciones graficas te generan este problema?",
+    "modeC": "El sistema Buffy detected un problema con la pantalla de tu dispositivo. Se observaron dos eventos:\n\n**1.** GPU driver está operativo y correcto.\n**2.** Firefox está consumiendo un exceso de CPU (más del 50%).\n\nPor lo tanto, la pantalla parpadea probablemente debido a un problema con Firefox.\n\n**Recomendaciones:**\n\n* Inspeccionar los procesos que consumen mucho CPU para determinar qué aplicación está usando tanto recursos.\n* Cerrar todas las pestañas de Chrome que no estén siendo utilizadas.\n* Si el problema persiste, verifica si hay actualizaciones de drivers disponibles para el GPU y Firefox.",
+    "error": null
+  },
+  {
+    "id": "A1",
+    "query": "Mi teléfono se queda en negro cuando llamo.",
+    "platform": "android",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo el problema. El teléfono se queda en negro cuando se llama. \n\n¿Has realizado cualquier cambio en el teléfono o en las aplicaciones que lo utilizan?",
+    "modeC": "El sistema Buffy no ha detectado ningún problema con el teléfono en este momento. El estado de observabilidad es \"no_evidence\", lo que significa que no hay evidencia suficiente para diagnosticar un problema.",
+    "error": null
+  },
+  {
+    "id": "A2",
+    "query": "Las notificaciones llegan pero no suenan.",
+    "platform": "android",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "Entiendo tu descripción. Las notificaciones llegan pero no suenan. ¿Qué tipo de notificaciones estás recibiendo? ¿Hay algún error en el formato de la notificación o en el tipo de notificación?",
+    "modeC": "El sistema Buffy no pudo determinar la causa de las notificaciones no sonar. El estado de observabilidad es \"no_evidence\", lo que significa que no hay evidencia suficiente para respaldar la detección de notificaciones.",
+    "error": null
+  },
+  {
+    "id": "A3",
+    "query": "No puedo actualizar apps porque dice almacenamiento lleno.",
+    "platform": "android",
+    "buffyChecks": [
+      "storage",
+      "processes"
+    ],
+    "buffyObsCount": 2,
+    "buffyActionsCount": 2,
+    "observability": {
+      "status": "observed",
+      "reason": "2 observaciones producidas de 2 checks seleccionados."
+    },
+    "modeA": "Entiendo tu problema. Si tu almacenamiento está lleno, no podrás actualizar apps. \n\n¿Has realizado alguna acción recientemente en tu dispositivo que podría haber generado este problema?",
+    "modeC": "El sistema diagnosticó que tu sistema tiene un almacenamiento lleno. Esto significa que no hay espacio disponible para instalar las aplicaciones.\n\n**Recomendaciones:**\n\n* Inspecciona el consumo de espacio en tu sistema.\n* Limita el número de aplicaciones y programas que estás ejecutando.\n* Consulta la configuración de tu sistema y verifica que no hay restricciones de almacenamiento.",
+    "error": null
+  },
+  {
+    "id": "A4",
+    "query": "La batería dice 100% pero se apaga a los 20%.",
+    "platform": "android",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "El problema parece ser que la batería está sobrecargada. 100% indica que la batería está completamente llena, pero el problema es que se apaga a los 20%. \n\nEs importante determinar la causa del problema para poder solucionarlo.",
+    "modeC": "El sistema Buffy indica que la batería está en estado activo, con un 100% de confiabilidad. Sin embargo, el sistema no puede determinar el estado de la batería a los 20%. Por lo tanto, no se puede determinar si la batería está funcionando correctamente o no.",
+    "error": null
+  },
+  {
+    "id": "A5",
+    "query": "El GPS me dice que estoy en otra ciudad.",
+    "platform": "android",
+    "buffyChecks": [],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "no_evidence",
+      "reason": "Consulta no diagnóstica o sin patrones reconocidos."
+    },
+    "modeA": "El GPS parece estar giving un error. Se espera que esté en la misma ciudad que se indica en el GPS.",
+    "modeC": "El sistema Buffy no tiene suficiente información para diagnosticar que el usuario está en otra ciudad. El estado de \"no_evidence\" en la observación \"Consulta no diagnóstica o sin patrones reconocidos\" indica que no hay evidencia específica que sugiera que el usuario está en otra ciudad.",
+    "error": null
+  },
+  {
+    "id": "X1",
+    "query": "Mi PC hace un ruido raro cuando la prendo.",
+    "platform": "cross",
+    "buffyChecks": [
+      "cpu",
+      "ram",
+      "gpu",
+      "storage",
+      "temperature",
+      "processes"
+    ],
+    "buffyObsCount": 6,
+    "buffyActionsCount": 2,
+    "observability": {
+      "status": "observed",
+      "reason": "6 observaciones producidas de 6 checks seleccionados."
+    },
+    "modeA": "El ruido raro que percibes puede ser causado por diversos factores. Primero, verifica el estado del caso. Si el ruido persiste en las mismas condiciones, es probable que sea un problema con el hardware. Si el ruido desaparece cuando la computadora está en modo seguro, es probable que sea un problema con el software.\n\nSi no tienes información adicional, no tengas miedo de consultar con un técnico de soporte técnico.",
+    "modeC": "El sistema diagnosticó un ruido en el sistema. Los resultados muestran que el CPU está funcionando correctamente con una temperatura de 42°C. El sistema también observa que el RAM está disponible con 50% de sus 8 GB.\n\nSin embargo, el sistema detecta un proceso llamado \"firefox\" que está consumiendo un considerable porcentaje de los recursos CPU (aproximadamente 50%).\n\n**Recomendaciones:**\n\n* Inspeccionar el proceso \"firefox\" para determinar qué está causando el ruido.\n* Si el problema persiste, cerrar el proceso \"firefox\" para evitar que afecte al rendimiento del sistema.",
+    "error": null
+  },
+  {
+    "id": "X2",
+    "query": "Las apps se abren solas y se cierran.",
+    "platform": "cross",
+    "buffyChecks": [
+      "processes"
+    ],
+    "buffyObsCount": 1,
+    "buffyActionsCount": 2,
+    "observability": {
+      "status": "observed",
+      "reason": "1 observaciones producidas de 1 checks seleccionados."
+    },
+    "modeA": "Entiendo el problema. Las aplicaciones se cierran al abrirlas. ¿Has instalado las últimas actualizaciones de las aplicaciones?",
+    "modeC": "El sistema Buffy diagnosticó el sistema y encontró los siguientes resultados:\n\n{\n  \"query\": \"Las apps se abren solas y se cierran.\",\n  \"selection\": {\n    \"checks\": [\n      \"processes\"\n    ],\n    \"ambiguous\": false,\n    \"confidence\": \"high\"\n  },\n  \"observability\": {\n    \"status\": \"observed\",\n    \"reason\": \"1 observaciones producidas de 1 checks seleccionados.\"\n  },\n  \"observations\": [\n    {\n      \"id\": \"heavy-processes\",\n      \"severity\": \"warning\",\n      \"category\": \"Procesos\",\n      \"message\": \"Procesos consumiendo mucho CPU: firefox\"\n    }\n  ],\n  \"actions\": [\n    {\n      \"id\": \"inspect-processes\",\n      \"observed\": \"Procesos consumiendo mucho CPU: firefox\",\n      \"inferred\": \"Procesos consumiendo mucho CPU: firefox\",\n      \"recommended\": \"Inspeccionar procesos en detalle\",\n      \"instructions\": [\n        {\n          \"platform\": \"linux\",\n          \"ui_path\": null,\n          \"command\": \"ps aux --sort=-%mem | head -15\",\n          \"requires\": [],\n          \"status\": \"verified\"\n        }\n      ],\n      \"confidence\": \"high\"\n    },",
+    "error": null
+  },
+  {
+    "id": "X3",
+    "query": "No puedo conectarme a la wifi en ningún dispositivo.",
+    "platform": "cross",
+    "buffyChecks": [
+      "network",
+      "os"
+    ],
+    "buffyObsCount": 0,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "unsupported",
+      "reason": "Checks seleccionados no son observables por el adapter: network, os.",
+      "unsupportedChecks": [
+        "network",
+        "os"
+      ]
+    },
+    "modeA": "Entiendo tu problema. Si no puedes conectarte a la wifi en ningún dispositivo, hay varias cosas que puedes verificar:\n\n* **Verifica si la wifi está activa en el dispositivo.**\n* **Comprueba si el dispositivo está conectado a un cable.**\n* **Verifica los datos de red del dispositivo.**\n* **Reintenta el dispositivo.**\n* **Si aún no funciona, contacta al soporte técnico de tu proveedor de internet.**",
+    "modeC": "El sistema Buffy no pudo observar el estado de la conexión a la wifi en ningún dispositivo. El estado de la conexión es \"no_evidence\", lo que significa que no hay evidencia suficiente para determinar el estado de la conexión.\n\nPor lo tanto, no puedo proporcionar una respuesta específica sobre las posibles causas del problema.",
+    "error": null
+  },
+  {
+    "id": "X4",
+    "query": "Mi pantalla se ve amarilla de la nada.",
+    "platform": "cross",
+    "buffyChecks": [
+      "gpu"
+    ],
+    "buffyObsCount": 1,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "observed",
+      "reason": "1 observaciones producidas de 1 checks seleccionados."
+    },
+    "modeA": "Entiendo. La pantalla parece estar mal configurada. ¿Has ajustado la configuración del monitor recientemente?",
+    "modeC": "El sistema Buffy indica que la pantalla tiene un problema con el driver de GPU. El estado de GPU es \"ok\", lo que significa que no hay errores conocidos en el hardware. Sin embargo, el sistema no puede observar el estado del GPU, por lo que no puede determinar la causa del problema.",
+    "error": null
+  },
+  {
+    "id": "X5",
+    "query": "El mouse se mueve solo y además la pantalla parpadea.",
+    "platform": "cross",
+    "buffyChecks": [
+      "gpu"
+    ],
+    "buffyObsCount": 1,
+    "buffyActionsCount": 0,
+    "observability": {
+      "status": "observed",
+      "reason": "1 observaciones producidas de 1 checks seleccionados."
+    },
+    "modeA": "El problema parece ser que el mouse está haciendo clics sin soltarlo. Esto puede ser causado por un problema con el sensor del mouse, un problema con las conexiones del mouse o un problema con el software.\n\nRecomendaría que intente resolver el problema por tu cuenta. Si no puedes resolverlo, contacta con un soporte técnico de la marca del mouse o con un servicio de asistencia técnica.",
+    "modeC": "El sistema Buffy indica que el sistema está en estado normal. Se observaron 1 evento de movimiento del mouse y 1 evento de parpaje de la pantalla, lo que sugiere que el sistema está funcionando correctamente.",
+    "error": null
+  }
+]

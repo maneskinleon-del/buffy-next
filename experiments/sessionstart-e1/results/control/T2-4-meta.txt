@@ -1,0 +1,8 @@
+condition: control
+task: T2
+run: 4
+model: gemma4:cloud
+rc: 0
+latency_ms: 3422
+retries: 0
+finished_at: 2026-08-26T14:56:47-04:00

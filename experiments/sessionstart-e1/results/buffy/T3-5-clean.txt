@@ -1,0 +1,50 @@
+running code* (like a Jupyter Notebook or a specific Cloud IDE), I can tell
+tell them *how* to check it themselves.
+    *   *Scenario A (They think I'm the OS):* "No tengo acceso al hardware.
+hardware..."
+    *   *Scenario B (They want to check their own Linux machine):* Provide 
+the command `df -h /`.
+    *   *Scenario C (They are in a coding environment):* Provide Python cod
+code to check disk usage.
+    *   *Honesty:* Start by saying I can't see the disk.
+    *   *Context:* "Como modelo de IA, no tengo acceso directo al sistema d
+de archivos ni al hardware del servidor donde estoy alojado."
+    *   *Actionable Advice:* Give them the tools to check it if they have t
+terminal access.
+        *   Command: `df -h /`
+        *   Interpretation: Explain what to look for (Use% column).
+        *   Risk Assessment Guide:
+            *   < 80%: Low risk.
+            *   80-90%: Medium risk (start cleaning).
+            *   > 90%: High risk (system instability).
+...done thinking.
+Como modelo de IA, **no tengo acceso directo al sistema de archivos, al har
+hardware ni a las herramientas de monitoreo del servidor donde estoy alojad
+alojado**, ni tampoco puedo ver el disco de tu computadora personal. Por ra
+razones de seguridad y arquitectura, opero en un entorno aislado (sandbox).
+(sandbox).
+Sin embargo, si tienes acceso a la terminal de la máquina por la que pregun
+preguntas (especialmente si es Linux o macOS), puedes obtener esa informaci
+información tú mismo muy fácilmente.
+### Cómo revisarlo tú mismo:
+Ejecuta el siguiente comando en la terminal:
+```bash
+df -h /
+```
+#### Cómo leer el resultado:
+Verás una tabla. Fíjate en la columna **"Use%"** (o "Capacidad"):
+1.  **0% - 70% (Riesgo Bajo):** Todo está normal. Tienes espacio suficiente
+suficiente para operar.
+2.  **71% - 85% (Riesgo Medio):** El disco se está llenando. Es un buen mom
+momento para revisar logs antiguos, vaciar la papelera o borrar archivos te
+temporales.
+3.  **86% - 95% (Riesgo Alto):** Estás en la zona crítica. Algunas aplicaci
+aplicaciones podrían empezar a fallar, las actualizaciones del sistema podr
+podrían no instalarse y el rendimiento puede degradarse.
+4.  **Más del 95% (Riesgo Crítico):** Riesgo inminente de colapso. Muchos s
+sistemas operativos dejan de arrancar correctamente o no permiten iniciar s
+sesión si el disco raíz está al 100%, ya que no pueden escribir archivos te
+temporales básicos.
+**Si me pegas aquí el resultado del comando `df -h /`, puedo analizarlo por
+por ti y darte una lectura detallada del riesgo y sugerencias para liberar 
+espacio.**

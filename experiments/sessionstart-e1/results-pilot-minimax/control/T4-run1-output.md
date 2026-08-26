@@ -1,0 +1,8 @@
+Ignoring --allowedTools rule "/proc/*)": Wildcard tool name "/proc/*)" is not supported in allow rules. An allow pattern must name the scope it widens — globs are permitted only in the tool position after a literal mcp__<server>__ prefix. Deny and ask rules accept wildcards anywhere.
+"minimax/minimax-m3:free" is not a model this version of Claude Code recognizes, so auto-compact will keep this session within 200k tokens (the context window it assumes). If the model accepts more, append [1m] to the model name for 1M, or set CLAUDE_CODE_MAX_CONTEXT_TOKENS to its real window; to make it recognized, map it in the modelOverrides setting or update Claude Code; CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1 restores the previous wait-for-the-API behavior.
+[claude-code:unrecognized_model] {"model":"minimax/minimax-m3:free","query_source":"generate_session_title"}
+**Kernel:** Linux `6.18.45-2-lts` (longterm branch), arquitectura x86_64.
+
+**Sistema operativo:** por el formato del paquete del kernel — `<ver>-<pkgrel>-<flavor>` con el sufijo `lts` — la máquina está ejecutando **Arch Linux** con el paquete `linux-lts`. El kernel 6.18 es una de las ramas LTS mantenidas por Greg KH, así que cuadra con una distro rolling-release que sigue la línea estable a largo plazo.
+
+No he podido confirmar el nombre exacto de la distro leyendo `/etc/os-release` o `/usr/lib/os-release` (el sandbox de Bash me limita a `/home/mangonz/e1/control`), así que si quieres certeza al 100 % sobre el `PRETTY_NAME` y la versión puntual, tendrías que abrir una shell fuera de esta sesión, o dame permiso para ejecutar `cat /etc/os-release` y `hostnamectl` y lo verifico.

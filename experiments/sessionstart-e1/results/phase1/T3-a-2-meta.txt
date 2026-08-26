@@ -1,0 +1,9 @@
+variant: a
+variant_name: json
+task: T3
+run: 2
+model: gemma4:cloud
+context_bytes: 1101
+latency_ms: 1383
+timestamp: 2026-08-26T17:13:11-04:00
+status: OK

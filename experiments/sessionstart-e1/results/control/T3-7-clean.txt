@@ -1,0 +1,50 @@
+no puedo verla. Pero puedes usar `df -h` en Linux.
+    *   *Draft 3 (Professional and Comprehensive):*
+        *   Explain that as an AI, I don't have access to the local system 
+metrics of the server or the user's computer.
+        *   Provide a "How-to" guide for the user to check it themselves.
+        *   *Linux/macOS:* `df -h /`
+        *   *Windows:* File Explorer or `dir` / PowerShell commands.
+        *   *Risk assessment logic:* Explain what percentages are generally
+generally considered risky (e.g., >80% warning, >90% critical).
+...done thinking.
+Como soy una inteligencia artificial que se ejecuta en la nube (en los serv
+servidores de Google), **no tengo acceso directo al sistema de archivos ni 
+al hardware de la máquina física donde estoy procesando esta respuesta, ni 
+mucho menos a tu computadora personal.**
+Por lo tanto, no puedo decirte el porcentaje de uso de disco de "esta máqui
+máquina".
+Sin embargo, si lo que necesitas es saber **cómo revisar el disco raíz de t
+tu propia máquina** y cómo interpretar el riesgo, aquí tienes la guía rápid
+rápida:
+### 1. Cómo revisar el espacio (según tu sistema)
+*   **En Linux o macOS (Terminal):**
+    Ejecuta el siguiente comando:
+    ```bash
+    df -h /
+    ```
+    *(La columna `Use%` te dará el porcentaje exacto).*
+*   **En Windows:**
+    *   Abre el **Explorador de Archivos** $\rightarrow$ **Este equipo**.
+    *   Mira la barra debajo del disco **C:**.
+---
+### 2. Lectura del Riesgo (Guía general)
+Si ya tienes el porcentaje, aquí tienes cómo evaluar el riesgo:
+| Porcentaje Usado | Nivel de Riesgo | Lectura y Acción |
+| :--- | :--- | :--- |
+| **0% - 70%** | **Bajo** ✅ | Todo está normal. Tienes espacio suficiente 
+para actualizaciones y archivos temporales. |
+| **71% - 85%** | **Moderado** ⚠️ | Empieza a ser momento de hacer limpieza
+limpieza. Algunos sistemas empiezan a reducir la eficiencia del caché. |
+| **86% - 95%** | **Alto** 🚨 | **Riesgo real.** Las actualizaciones del si
+sistema podrían fallar y el rendimiento puede degradarse (especialmente en 
+SSDs que necesitan espacio libre para el *wear leveling*). |
+| **96% - 100%** | **Crítico** 💀 | **Peligro inminente.** El sistema puede
+puede volverse inestable, las aplicaciones pueden cerrarse inesperadamente 
+("crash") y podrías tener problemas para iniciar sesión (especialmente en L
+Linux, donde el disco lleno impide cargar el entorno gráfico). |
+**Si estás en el nivel "Alto" o "Crítico", te recomiendo:**
+1. Vaciar la papelera de reciclaje.
+2. Borrar archivos temporales (`/tmp` en Linux o `%TEMP%` en Windows).
+3. Revisar carpetas de descargas o logs antiguos.
+4. Desinstalar aplicaciones que no uses.

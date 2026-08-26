@@ -1,0 +1,8 @@
+condition: control
+task: T5
+run: run1
+model: minimax/minimax-m3:free
+rc: 0
+latency_ms: 30300
+retries: 0
+finished_at: 2026-08-26T14:33:48-04:00

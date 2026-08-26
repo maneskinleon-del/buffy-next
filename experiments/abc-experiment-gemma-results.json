@@ -1,0 +1,385 @@
+[
+  {
+    "id": "CASE-01",
+    "query": "El mouse se mueve solo.",
+    "buffy": {
+      "checks": [],
+      "ambiguous": false,
+      "observations": [],
+      "actions": []
+    },
+    "modeA": "El problema con el mouse parece ser simple. Primero, asegúrate de verificar si el mouse está conectado y que la conexión esté estable. Si la conexión está estable, verifica el estado del mouse en la ventana de propiedades del sistema. Si el estado del mouse está configurado para \"no activo\", cambialo a \"activo\".",
+    "modeC": "El sistema Buffy no encontró problemas en el sistema."
+  },
+  {
+    "id": "CASE-02",
+    "query": "Desde ayer mi PC está lenta y Chrome se queda pegado.",
+    "buffy": {
+      "checks": [
+        "cpu",
+        "ram",
+        "gpu",
+        "temperature",
+        "processes"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "message": "CPU: AMD Ryzen 5 3400G (4 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "message": "RAM: 8 GB disponibles (50% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "message": "GPU: AMD Radeon Vega (driver: amdgpu)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "message": "Temperatura CPU: 42°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "message": "Procesos consumiendo mucho CPU: firefox"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "recommended": "Inspeccionar procesos en detalle",
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "confidence": "high"
+        }
+      ]
+    },
+    "modeA": "Entiendo tu problema. La lentilidad en tu PC y el pegado de Chrome son problemas comunes que pueden afectar el rendimiento.\n\n¿Has realizado alguna configuración en el sistema o en Chrome que pueda estar causando el problema?",
+    "modeC": "El sistema Buffy detectedó un problema con el sistema. Los resultados son:\n\n**Query:** Desde ayer mi PC está lenta y Chrome se queda pegado.\n\n**Observaciones:**\n\n* CPU: AMD Ryzen 5 3400G (4 cores)\n* RAM: 8 GB disponibles (50% usado)\n* GPU: AMD Radeon Vega (driver: amdgpu)\n* Temperatura CPU: 42°C\n* Procesos consumiendo mucho CPU: firefox\n\n**Acciones:**\n\n* Inspeccionar procesos en detalle\n* Cerrar procesos que consumen muchos recursos\n\n**Recomendación:** Inspeccionar el sistema y cerrar los procesos que consumen muchos recursos."
+  },
+  {
+    "id": "CASE-03",
+    "query": "Mi impresora imprime con colores raros.",
+    "buffy": {
+      "checks": [
+        "cpu",
+        "ram",
+        "gpu",
+        "storage",
+        "temperature",
+        "processes"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "message": "CPU: AMD Ryzen 5 3400G (4 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "message": "RAM: 8 GB disponibles (50% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "message": "GPU: AMD Radeon Vega (driver: amdgpu)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "message": "Temperatura CPU: 42°C"
+        },
+        {
+          "id": "storage-/",
+          "severity": "ok",
+          "message": "Disco /: 230 GB libres / 500 GB"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "message": "Procesos consumiendo mucho CPU: firefox"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "recommended": "Inspeccionar procesos en detalle",
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "confidence": "high"
+        }
+      ]
+    },
+    "modeA": "Entiendo tu descripción. La impresión con colores raros indica un problema con el perfil de color en la impresora.\n\n¿Te gustaría saber cómo resolver este problema o si necesitas ayuda para configurar la impresión con colores regulares?",
+    "modeC": "El sistema Buffy no encontró ningún problema con el sistema. El sistema diagnosticó que el sistema está funcionando correctamente y que no existen problemas graves."
+  },
+  {
+    "id": "CASE-04",
+    "query": "Mi laptop se calienta mucho cuando juego.",
+    "buffy": {
+      "checks": [
+        "temperature",
+        "cpu",
+        "processes"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "message": "CPU: AMD Ryzen 5 3400G (4 cores)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "message": "Temperatura CPU: 42°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "message": "Procesos consumiendo mucho CPU: firefox"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "recommended": "Inspeccionar procesos en detalle",
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "confidence": "high"
+        }
+      ]
+    },
+    "modeA": "Entiendo tu descripción. La calienta del laptop al jugar puede ser un problema causado por diversos factores.\n\n¿Has experimentado otros problemas con tu laptop? ¿Has realizado cualquier cambio en el sistema recientemente?",
+    "modeC": "El sistema Buffy detectedó un problema con el sistema. Los resultados muestran un aumento en la temperatura y el consumo de recursos por parte del proceso \"firefox\".\n\n**Alertas:**\n\n* **Temperatura:** 42°C\n* **Uso de recursos:** Firefox\n\n**Recomendaciones:**\n\n* Inspeccionar el proceso \"firefox\" para identificar qué está consumiendo tanta energía.\n* Cerrar todos los procesos que consumen muchos recursos.\n* Si el problema persiste, intente solucionar el problema directamente o contactar a soporte técnico."
+  },
+  {
+    "id": "CASE-05",
+    "query": "No me deja instalar nada porque el disco está lleno.",
+    "buffy": {
+      "checks": [
+        "storage",
+        "tools",
+        "gpu"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "message": "GPU: AMD Radeon Vega (driver: amdgpu)"
+        },
+        {
+          "id": "storage-/",
+          "severity": "ok",
+          "message": "Disco /: 230 GB libres / 500 GB"
+        }
+      ],
+      "actions": []
+    },
+    "modeA": "No tengo suficiente información para determinar el problema. Para solucionar el problema, necesitaría saber el tamaño del disco actual y el tamaño disponible del disco libre.",
+    "modeC": "El sistema Buffy no encontró ningún problema con la instalación del sistema. El disco está lleno, por lo tanto, no se pueden instalar ningún nuevo archivo o programa."
+  },
+  {
+    "id": "CASE-06",
+    "query": "Gracias por la ayuda.",
+    "buffy": {
+      "checks": [],
+      "ambiguous": false,
+      "observations": [],
+      "actions": []
+    },
+    "modeA": "¿Qué puedo hacer para ayudarte? ¿Qué problema estás teniendo con tu computadora?",
+    "modeC": "El sistema Buffy no encontró problemas."
+  },
+  {
+    "id": "CASE-07",
+    "query": "Algo anda mal con mi computadora.",
+    "buffy": {
+      "checks": [
+        "cpu",
+        "ram",
+        "gpu",
+        "temperature",
+        "processes"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "message": "CPU: AMD Ryzen 5 3400G (4 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "message": "RAM: 8 GB disponibles (50% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "message": "GPU: AMD Radeon Vega (driver: amdgpu)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "message": "Temperatura CPU: 42°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "message": "Procesos consumiendo mucho CPU: firefox"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "recommended": "Inspeccionar procesos en detalle",
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "confidence": "high"
+        }
+      ]
+    },
+    "modeA": "Entiendo. ¿Qué problema tiene tu computadora? ¿Te parece que no funciona correctamente?",
+    "modeC": "El sistema Buffy encontró un problema con el sistema. Se detectedaron 3 errores:\n\n1. **CPU:** El proceso \"firefox\" está consumiendo un gran porcentaje de la CPU (42%).\n2. **RAM:** El proceso \"firefox\" está utilizando un 50% de la RAM disponible.\n3. **Procesos** El proceso \"firefox\" está consumiendo un gran porcentaje de la CPU (42%).\n\nDebido a estos errores, Buffy recomienda inspeccionar los procesos que están usando mucha CPU y cerrar aquellos que estén consumiendo demasiado recursos."
+  },
+  {
+    "id": "CASE-08",
+    "query": "El internet se corta cada vez que descargo algo pesado.",
+    "buffy": {
+      "checks": [
+        "network",
+        "os",
+        "cpu",
+        "ram",
+        "gpu",
+        "temperature",
+        "processes"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "message": "CPU: AMD Ryzen 5 3400G (4 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "message": "RAM: 8 GB disponibles (50% usado)"
+        },
+        {
+          "id": "gpu-driver-ok",
+          "severity": "ok",
+          "message": "GPU: AMD Radeon Vega (driver: amdgpu)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "message": "Temperatura CPU: 42°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "message": "Procesos consumiendo mucho CPU: firefox"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "recommended": "Inspeccionar procesos en detalle",
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "confidence": "high"
+        }
+      ]
+    },
+    "modeA": "Entiendo tu problema. El cortaje del internet al descargar archivos pesados es un problema común. \n\n¿Te gustaría saber cómo puedo ayudarte a solucionar este problema?",
+    "modeC": "El sistema Buffy detectedó un problema con el sistema. Los resultados son los siguientes:\n\n```\n{\n  \"query\": \"El internet se corta cada vez que descargo algo pesado.\",\n  \"selection\": {\n    \"checks\": [\n      \"network\",\n      \"os\",\n      \"cpu\",\n      \"ram\",\n      \"gpu\",\n      \"temperature\",\n      \"processes\"\n    ],\n    \"ambiguous\": false,\n    \"confidence\": \"high\"\n  },\n  \"observations\": [\n    {\n      \"id\": \"heavy-processes\",\n      \"severity\": \"warning\",\n      \"category\": \"Procesos\",\n      \"message\": \"Procesos consumiendo mucho CPU: firefox\"\n    }\n  ],\n  \"actions\": [\n    {\n      \"id\": \"inspect-processes\",\n      \"observed\": \"CPU: AMD Ryzen 5 3400G (4 cores); RAM: 8 GB disponibles (50% usado); Procesos consumiendo mucho CPU: firefox\",\n      \"inferred\": \"CPU: AMD Ryzen 5 3400G (4 cores); RAM: 8 GB disponibles (50% usado); Procesos consumiendo mucho CPU: firefox\",\n      \"recommended\": \"Inspeccionar procesos en detalle\",\n      \"instructions\": [\n        {\n          \"platform\": \"linux\","
+  },
+  {
+    "id": "CASE-09",
+    "query": "Tengo poca RAM y además la temperatura sube.",
+    "buffy": {
+      "checks": [
+        "ram",
+        "processes",
+        "temperature",
+        "cpu"
+      ],
+      "ambiguous": false,
+      "observations": [
+        {
+          "id": "cpu-status",
+          "severity": "ok",
+          "message": "CPU: AMD Ryzen 5 3400G (4 cores)"
+        },
+        {
+          "id": "ram-status",
+          "severity": "ok",
+          "message": "RAM: 8 GB disponibles (50% usado)"
+        },
+        {
+          "id": "temperature-status",
+          "severity": "ok",
+          "message": "Temperatura CPU: 42°C"
+        },
+        {
+          "id": "heavy-processes",
+          "severity": "warning",
+          "message": "Procesos consumiendo mucho CPU: firefox"
+        }
+      ],
+      "actions": [
+        {
+          "id": "inspect-processes",
+          "recommended": "Inspeccionar procesos en detalle",
+          "confidence": "high"
+        },
+        {
+          "id": "close-heavy-processes",
+          "recommended": "Cerrar procesos que consumen muchos recursos",
+          "confidence": "high"
+        }
+      ]
+    },
+    "modeA": "Entiendo tu problema. La poca RAM y la subida de temperatura son problemas potenciales que pueden afectar el rendimiento de tu sistema.\n\n¿Qué medidas puedes tomar para resolver este problema?",
+    "modeC": "El sistema diagnosticó un problema con el sistema. Se detectaron 4 procesos con un consumo elevado de recursos en el sistema. \n\n**Los procesos con mayor consumo de recursos son:**\n\n* firefox (100% CPU)\n* firefox (50% CPU)\n* top (50% CPU)\n* systemd-notify-service (50% CPU)\n\n**Recomendaciones:**\n\n* Inspeccionar los procesos con mayor consumo de recursos para determinar qué están usando tanto recursos.\n* Cerrar los procesos que consumen muchos recursos.\n* Si el problema persiste, intente solucionar el problema directamente o contactar al soporte técnico."
+  },
+  {
+    "id": "CASE-10",
+    "query": "Estoy frustrado, nada funciona bien en mi PC.",
+    "buffy": {
+      "checks": [],
+      "ambiguous": false,
+      "observations": [],
+      "actions": []
+    },
+    "modeA": "Entiendo tu frustración. ¿Qué problema en tu PC te preocupa?",
+    "modeC": "Lo siento, parece que no hay ningún problema con tu sistema. Los resultados del diagnóstico son positivos, lo que significa que Buffy no encontró ningún problema con el sistema."
+  }
+]

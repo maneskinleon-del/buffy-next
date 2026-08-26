@@ -16,7 +16,7 @@ Analiza el equipo y prioriza qué revisarías primero.
 {
   "schema": "buffy.context/v1",
   "buffy_version": "0.1.0",
-  "generated_at": "2026-08-19T19:55:28.225Z",
+  "generated_at": "2026-08-19T20:13:51.914Z",
   "platform": {
     "os": "android-termux",
     "os_name": "Android (Termux)",
@@ -28,10 +28,10 @@ Analiza el equipo y prioriza qué revisarías primero.
     "cpu": "AMD Ryzen 5 3400G with Radeon Vega Graphics",
     "cpu_cores": 8,
     "ram_gb": 13.6,
-    "ram_available_gb": 9,
-    "gpu": "Connection{0xb4000071bd460e90, VSyncRequest::SingleSuppressCallback}",
+    "ram_available_gb": 8.6,
+    "gpu": "ARM, Mali-G57, OpenGL ES 3.2 v1.r40p0-01eac0.b0251c048237dcd59e6be15fba11a31a",
     "gpu_driver": "bundled",
-    "gpu_is_generic": true,
+    "gpu_is_generic": false,
     "storage": [
       {
         "mount": "/data",
