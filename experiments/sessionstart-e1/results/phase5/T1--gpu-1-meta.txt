@@ -1,0 +1,8 @@
+variant: -gpu
+task: T1
+run: 1
+model: gemma4:cloud
+context_bytes: 503
+latency_ms: 3401
+timestamp: 2026-08-26T18:12:59-04:00
+status: OK

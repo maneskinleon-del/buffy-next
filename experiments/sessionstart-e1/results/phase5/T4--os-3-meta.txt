@@ -1,0 +1,8 @@
+variant: -os
+task: T4
+run: 3
+model: gemma4:cloud
+context_bytes: 505
+latency_ms: 2486
+timestamp: 2026-08-26T18:19:45-04:00
+status: OK

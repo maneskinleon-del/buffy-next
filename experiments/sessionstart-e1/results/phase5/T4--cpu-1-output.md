@@ -1,0 +1,48 @@
+# Phase 5: T4 — Variant -cpu
+
+## Context (-cpu)
+System context provided by Buffy (observed now):
+
+Platform:
+- OS: linux (EndeavourOS)
+- Kernel: 6.18.45-2-lts
+- Arch: x86_64
+
+Hardware:
+- RAM: 13.6 GB total, 7.0 GB available
+- GPU: AMD/ATI Picasso/Raven 2 [Radeon Vega Series], driver amdgpu
+- Disk (/): 217 GB total, 88.3 GB free (58% used)
+- CPU temperature: 43°C
+
+Environment:
+- Shell: zsh
+- Node.js: v26.7.0
+
+Available tools:
+- Node.js v26.7.0
+- npm 12.0.2
+- git 2.55.0
+- Python 3.14.7
+- Docker 29.7.2
+- ADB 37.0.0
+
+Privileges: shell=yes, adb=yes, root=no
+
+## Response
+Thinking...
+*   Question: "Describe qué sistema operativo y kernel tengo. Sé específico[10D[K
+específico con la versión." (Describe what operating system and kernel I ha[2D[K
+have. Be specific with the version.)
+    *   Constraint: Answer concisely with specific data from the provided s[1D[K
+system facts. If not available, say so.
+
+    *   Platform:
+        *   OS: linux (EndeavourOS)
+        *   Kernel: 6.18.45-2-lts
+        *   Arch: x86_64
+
+    *   OS: EndeavourOS (Linux)
+    *   Kernel: 6.18.45-2-lts
+...done thinking.
+
+Tienes el sistema operativo linux (EndeavourOS) y el kernel 6.18.45-2-lts.
