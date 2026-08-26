@@ -1,0 +1,7 @@
+position: early
+task: T2
+run: 1
+model: gemma4:cloud
+latency_ms: 1801
+timestamp: 2026-08-26T17:28:24-04:00
+status: OK
