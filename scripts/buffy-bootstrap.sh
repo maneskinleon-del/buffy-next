@@ -40,7 +40,9 @@ if [ "$RC" -eq 0 ] && [ -n "$OUT" ]; then
         mv "$LOG" "$LOG.1"
     fi
     log "OK bytes=${#OUT} repo=$REPO_ROOT"
-    printf '%s\n' "$OUT"
+    # El CLI solo inyecta contexto desde hookSpecificOutput.additionalContext:
+    # stdout plano NO llega a la sesión (verificado empíricamente, ver E1).
+    node -e 'const j=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(JSON.stringify({hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:"Contexto del sistema observado por Buffy:\n"+JSON.stringify(j)}}))' <<<"$OUT"
 else
     log "FAIL rc=$RC bytes=${#OUT} repo=$REPO_ROOT"
 fi
