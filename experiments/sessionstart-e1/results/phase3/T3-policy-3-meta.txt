@@ -1,0 +1,9 @@
+condition: policy
+task: T3
+run: 3
+model: gemma4:cloud
+latency_ms: 2291
+tool_mentions: 3
+buffy_references: 2
+timestamp: 2026-08-26T17:42:08-04:00
+status: OK
