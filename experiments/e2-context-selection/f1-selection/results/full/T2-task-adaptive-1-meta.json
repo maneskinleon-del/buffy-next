@@ -1,0 +1,11 @@
+{
+  "experiment": "e2-f1-selection",
+  "phase": "full",
+  "condition": "task-adaptive",
+  "task": "T2",
+  "run": 1,
+  "model": "gemma4:cloud",
+  "context_size": 199,
+  "latency_ms": 1307,
+  "timestamp": "2026-08-27T09:21:42-04:00"
+}

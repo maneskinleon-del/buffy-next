@@ -1,0 +1,25 @@
+{
+  "experiment": "e2-f1-selection",
+  "conditions": {
+    "full": {
+      "mean_score": 1.0,
+      "runs": 15,
+      "context_size": 4801
+    },
+    "high-value": {
+      "mean_score": 0.7444444444444444,
+      "runs": 15,
+      "context_size": 342
+    },
+    "task-adaptive": {
+      "mean_score": 0.9777777777777777,
+      "runs": 15,
+      "context_size": 362
+    },
+    "minimal": {
+      "mean_score": 0.95,
+      "runs": 15,
+      "context_size": 179
+    }
+  }
+}

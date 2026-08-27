@@ -1,0 +1,83 @@
+{
+  "platform": {
+    "os": "linux",
+    "os_name": "EndeavourOS",
+    "os_version": null,
+    "kernel": "6.18.45-2-lts",
+    "architecture": "x86_64"
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 5 3400G with Radeon Vega Graphics",
+    "cpu_cores": 8,
+    "ram_gb": 13.6,
+    "ram_available_gb": 7.1,
+    "gpu": "Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8)",
+    "gpu_driver": "pcieport",
+    "gpu_is_generic": false,
+    "storage": [
+      {
+        "mount": "/",
+        "total_gb": 217,
+        "free_gb": 88.2,
+        "used_percent": 58
+      }
+    ],
+    "temperature_c": 42
+  },
+  "environment": {
+    "shell": "zsh",
+    "node_version": "v26.7.0"
+  },
+  "tools": [
+    {
+      "name": "Node.js",
+      "available": true,
+      "version": "v26.7.0"
+    },
+    {
+      "name": "npm",
+      "available": true,
+      "version": "12.0.2"
+    },
+    {
+      "name": "git",
+      "available": true,
+      "version": "git version 2.55.0"
+    },
+    {
+      "name": "Python",
+      "available": true,
+      "version": "Python 3.14.7"
+    },
+    {
+      "name": "GCC",
+      "available": true,
+      "version": "gcc (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nEsto es software libre; vea el c\u00f3digo para las condiciones de copia.  NO hay\ngarant\u00eda; ni siquiera para MERCANTIBILIDAD o IDONEIDAD PARA UN PROP\u00d3SITO EN\nPARTICULAR"
+    },
+    {
+      "name": "Make",
+      "available": true,
+      "version": "GNU Make 4.4.1\nEste programa fue construido para x86_64-pc-linux-gnu\nCopyright (C) 1988-2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law."
+    },
+    {
+      "name": "Docker",
+      "available": true,
+      "version": "Docker version 29.7.2, build a7dcaa6fdb"
+    },
+    {
+      "name": "ADB",
+      "available": true,
+      "version": "Android Debug Bridge version 1.0.41\nVersion 37.0.0-android-tools\nInstalled as /usr/bin/adb\nRunning on Linux 6.18.45-2-lts (x86_64)"
+    },
+    {
+      "name": "curl",
+      "available": true,
+      "version": "curl 8.21.0 (x86_64-pc-linux-gnu) libcurl/8.21.0 OpenSSL/3.6.3 zlib/1.3.2 brotli/1.2.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.5 libssh2/1.11.1 nghttp2/1.70.0 ngtcp2/1.25.0 nghttp3/1.18.0 mit-krb5/1.22.2\nRelease-Date: 2026-06-24\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns mqtt mqtts pop3 pop3s rtsp scp sftp smtp smtps telnet tftp ws wss\nFeatures: alt-svc AsynchDNS brotli GSS-API HSTS HTTP2 HTTP3 HTTPS-proxy IDN IPv6 Kerberos Largefile libz PSL SPNEGO SSL threadsafe TLS-SRP UnixSockets zstd"
+    },
+    {
+      "name": "wget",
+      "available": true,
+      "version": "GNU Wget 1.25.0 hecho en linux-gnu.\n\n-cares +digest -gpgme +https +ipv6 +iri +large-file -metalink +nls \n+ntlm +opie +psl +ssl/gnutls \n\nWgetrc: \n    /etc/wgetrc (sistema)\nLocale: \n    /usr/share/locale \nCompila: \n    gcc -DHAVE_CONFIG_H -DSYSTEM_WGETRC=\"/etc/wgetrc\" \n    -DLOCALEDIR=\"/usr/share/locale\" -I. -I../lib -I../lib \n    -I/usr/include/p11-kit-1 -DHAVE_LIBGNUTLS -DNDEBUG -march=x86-64 \n    -mtune=generic -O2 -pipe -fno-plt -fexceptions \n    -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security \n    -fstack-clash-protection -fcf-protection -fno-omit-frame-pointer \n    -mno-omit-leaf-frame-pointer -g \n    -ffile-prefix-map=/build/wget/src=/usr/src/debug/wget -flto=auto \nEnlaza: \n    gcc -I/usr/include/p11-kit-1 -DHAVE_LIBGNUTLS -DNDEBUG \n    -march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions \n    -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security \n    -fstack-clash-protection -fcf-protection -fno-omit-frame-pointer \n    -mno-omit-leaf-frame-pointer -g \n    -ffile-prefix-map=/build/wget/src=/usr/src/debug/wget -flto=auto \n    -Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now \n    -Wl,-z,pack-relative-relocs -flto=auto -lpcre2-8 -luuid -lidn2 \n    -lnettle -lgnutls -lz -lpsl ../lib/libgnu.a \n    /usr/lib/libunistring.so \n\nCopyright (\u00a9) 2015 Free Software Foundation, Inc.\nLicencia GPLv3+: GPL de GNU versi\u00f3n 3 o posterior\n<http://www.gnu.org/licenses/gpl.html>.\nEsto es software libre: es usted libre de cambiarlo y redistribuirlo.\nNO hay GARANT\u00cdA, hasta donde permita la ley.\n\nEscrito originalmente por Hrvoje Niksic <hniksic@xemacs.org>.\nEnv\u00ede informes de gazapos y preguntas a <bug-wget@gnu.org>."
+    }
+  ]
+}

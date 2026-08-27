@@ -1,0 +1,14 @@
+{
+  "platform": {
+    "os": "linux",
+    "os_name": "EndeavourOS",
+    "os_version": null,
+    "kernel": "6.18.45-2-lts",
+    "architecture": "x86_64"
+  },
+  "hardware": {
+    "gpu": "Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8)",
+    "gpu_driver": "pcieport",
+    "gpu_is_generic": false
+  }
+}

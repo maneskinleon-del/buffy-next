@@ -1,0 +1,13 @@
+{
+  "platform": {
+    "os": "linux",
+    "os_name": "EndeavourOS",
+    "os_version": null,
+    "kernel": "6.18.45-2-lts",
+    "architecture": "x86_64"
+  },
+  "environment": {
+    "shell": "zsh",
+    "node_version": "v26.7.0"
+  }
+}

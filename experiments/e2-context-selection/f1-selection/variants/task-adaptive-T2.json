@@ -1,0 +1,11 @@
+{
+  "platform": {
+    "os": "linux",
+    "kernel": "6.18.45-2-lts"
+  },
+  "hardware": {
+    "ram_gb": 13.6,
+    "ram_available_gb": 7.1,
+    "cpu": "AMD Ryzen 5 3400G with Radeon Vega Graphics"
+  }
+}

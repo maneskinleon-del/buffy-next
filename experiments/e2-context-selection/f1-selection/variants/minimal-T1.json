@@ -1,0 +1,6 @@
+{
+  "hardware": {
+    "gpu": "Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8)",
+    "gpu_driver": "pcieport"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "hardware": {
+    "storage": [
+      {
+        "mount": "/",
+        "total_gb": 217,
+        "free_gb": 88.2,
+        "used_percent": 58
+      }
+    ]
+  }
+}
