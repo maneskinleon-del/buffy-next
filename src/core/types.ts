@@ -1,4 +1,4 @@
-// Buffy Next — Core Types (v2.2 — Action Gate)
+// Buffy Next — Core Types (v2.4 — Freshness Gating E4.2)
 // ActionDefinition is metadata-only. Physical execution is exclusively via ActionGate.
 
 // ─── Platform ──────────────────────────────────────────────
@@ -217,12 +217,28 @@ export interface CheckResult {
   explanation?: string;
   actionId?: string;
   suggestedAction?: string;
+  /** Momento en que la medición fue tomada (E4.1) */
+  observedAt?: string;
+  /** Fuente de la medición (E4.1) */
+  source?: string;
 }
 
 /** Backward compat alias */
 export type DiagnosticItem = CheckResult;
 
-// ─── Observation & Inference (remote v0.4.0) ─────────────
+// ─── Epistemic State (E4.1) ───────────────────────────────
+
+/**
+ * Estado epistémico de una observación.
+ *
+ * OBSERVED  — dato medido directamente del sistema, dentro del umbral de frescura.
+ * INFERRED  — dato derivado de OBSERVED, no medido directamente.
+ * STALE     — dato que fue OBSERVED pero cuya edad excede el FreshnessPolicy.
+ * UNKNOWN   — no se pudo obtener el dato; se omite el value.
+ */
+export type EpistemicState = 'observed' | 'inferred' | 'stale' | 'unknown';
+
+// ─── Observation & Inference (remote v0.4.0 → v2.3 E4.1) ─
 
 /** A measured fact from the system — pure data, no interpretation */
 export interface Observation {
@@ -241,6 +257,15 @@ export interface Observation {
   };
   /** Severity: ok = within range, warning = exceeded threshold, error = critical */
   severity: 'ok' | 'warning' | 'error' | 'unknown';
+
+  /** Momento en que la medición fue tomada (ISO 8601) */
+  observedAt: string;
+  /** Fuente que produjo la medición (e.g., "LinuxAdapter.detectCpu") */
+  source: string;
+  /** Estado epistémico resuelto por Buffy */
+  epistemicState: EpistemicState;
+  /** Edad en ms desde observedAt hasta "ahora" (calculada al compactar) */
+  ageMs?: number;
 }
 
 /** An inference derived from observations — possible cause, not confirmed */
@@ -309,13 +334,56 @@ export interface SuggestedAction {
   reason: string;
 }
 
+// ─── Freshness Gating (E4.2) ─────────────────────────────
+
+/**
+ * Resultado del freshness gating.
+ * Separa observaciones frescas de las que necesitan refresh.
+ */
+export interface GatedResult {
+  /** Observaciones frescas que entran al contexto */
+  included: CheckResult[];
+  /** Campos stale que fueron refrescados exitosamente */
+  refreshed: CheckResult[];
+  /** IDs de campos stale que se omitieron (irrelevantes) */
+  omittedStale: string[];
+  /** IDs de campos que necesitan refresh pero no se pudieron refrescar */
+  needsRefresh: string[];
+  /** Instrumentación por campo para debugging */
+  instrumentation: FreshnessInstrumentation[];
+}
+
+/**
+ * Instrumentación de una decisión de freshness.
+ * Registra el estado antes/después y si se realizó refresh.
+ */
+export interface FreshnessInstrumentation {
+  /** Nombre del campo (e.g., "ram", "cpu", "temperature") */
+  field: string;
+  /** Estado epistémico antes del gating */
+  epistemicStateBefore: string;
+  /** Si se solicitó refresh */
+  refreshRequired: boolean;
+  /** Si se ejecutó refresh */
+  refreshPerformed: boolean;
+  /** Estado epistémico después del gating */
+  epistemicStateAfter: string;
+  /** Edad en ms después del refresh (si aplica) */
+  ageMsAfter: number;
+  /** Si最终 entró al contexto */
+  includedInContext: boolean;
+}
+
 export interface DoctorReport {
   platform: PlatformInfo;
   system: SystemInfo;
   capabilities: Capability[];
   privileges?: PlatformCapabilities;
   items: CheckResult[];
-  timestamp: string;
+  /** Momento en que se generó el reporte completo (E4.1) */
+  generatedAt: string;
+  /** @deprecated Use generatedAt */
+  timestamp?: string;
 }
 
 // ─── State ─────────────────────────────────────────────────
@@ -335,10 +403,31 @@ export interface ActionRecord {
   message: string;
 }
 
-// ─── Context Package ───────────────────────────────────────
+// ─── Hardware Field (E4.1) ─────────────────────────────────
+
+/**
+ * Campo de hardware con metadata temporal.
+ * Reemplaza valores primitivos en BuffyContext.hardware.
+ */
+export interface HardwareField {
+  /** El valor. null solo si epistemicState === 'unknown' */
+  value: number | string | boolean | null;
+  /** Para valores numéricos */
+  unit?: string;
+  /** Momento en que se midió */
+  observedAt: string;
+  /** Edad en ms desde observedAt */
+  ageMs: number;
+  /** Estado epistémico resuelto por Buffy */
+  freshness: 'observed' | 'stale' | 'unknown';
+  /** Fuente de la medición (adapter + método) */
+  source: string;
+}
+
+// ─── Context Package (v2 → E4.1) ──────────────────────────
 
 export interface BuffyContext {
-  schema: 'buffy.context/v1';
+  schema: 'buffy.context/v1' | 'buffy.context/v2';
   buffy_version: string;
   generated_at: string;
   platform: {
@@ -349,20 +438,20 @@ export interface BuffyContext {
     architecture: string;
   };
   hardware: {
-    cpu: string | null;
+    cpu: HardwareField | null;
     cpu_cores: number | null;
-    ram_gb: number | null;
-    ram_available_gb: number | null;
-    gpu: string | null;
-    gpu_driver: string | null;
-    gpu_is_generic: boolean | null;
+    ram_gb: HardwareField | null;
+    ram_available_gb: HardwareField | null;
+    gpu: HardwareField | null;
+    gpu_driver: HardwareField | null;
+    gpu_is_generic: HardwareField | null;
     storage: Array<{
       mount: string;
       total_gb: number;
       free_gb: number;
       used_percent: number;
     }>;
-    temperature_c: number | null;
+    temperature_c: HardwareField | null;
     process_groups?: Array<{
       name: string;
       count: number;

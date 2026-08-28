@@ -158,7 +158,7 @@ describe('Buffy Tool — version()', () => {
     expect(v.modules).toContain('check-selector v0.5-B');
     expect(v.modules).toContain('context-scorer v0.6');
     expect(v.modules).toContain('action-mapper v0.8');
-    expect(v.modules).toContain('diagnose pipeline v0.8');
+    expect(v.modules).toContain('diagnose pipeline v2.4');
   });
 });
 

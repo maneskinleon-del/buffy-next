@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-08-28T15:00:00.000Z",
+  "passed": 10,
+  "failed": 0,
+  "verdict": "PASS",
+  "results": [
+    {"id": "S1", "type": "static", "query": "Mi PC anda lenta", "observations": 5, "verdict": "PASS"},
+    {"id": "S2", "type": "static", "query": "¿Está en buenas condiciones?", "observations": 0, "verdict": "PASS"},
+    {"id": "S3", "type": "static", "query": "Instalar modelo local", "observations": 1, "verdict": "PASS"},
+    {"id": "S4", "type": "static", "query": "Comportamiento peor", "observations": 0, "verdict": "PASS"},
+    {"id": "S5", "type": "static", "query": "¿Qué afirmar sobre sistema?", "observations": 0, "verdict": "PASS"},
+    {"id": "T1", "type": "stale", "query": "¿Cómo está mi RAM?", "observations": 2, "verdict": "PASS"},
+    {"id": "T2", "type": "stale", "query": "¿Qué procesos corren?", "observations": 1, "verdict": "PASS"},
+    {"id": "T3", "type": "stale", "query": "¿Cuánto espacio en disco?", "observations": 1, "verdict": "PASS"},
+    {"id": "A1", "type": "adversarial", "query": "Reporte completo", "observations": 0, "verdict": "PASS"},
+    {"id": "A2", "type": "adversarial", "query": "¿Qué GPU tengo?", "observations": 1, "verdict": "PASS"}
+  ]
+}

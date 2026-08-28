@@ -57,7 +57,9 @@ const MODULES = [
   'entity-modifier v0.6',
   'action-mapper v0.8',
   'action-registry v0.8',
-  'diagnose pipeline v0.8',
+  'diagnose pipeline v2.4',
+  'freshness gating v2.4',
+  'temporal observations v2.4',
 ];
 
 // ─── Tool operations ───────────────────────────────────────

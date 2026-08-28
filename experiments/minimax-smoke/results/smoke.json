@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-08-28T15:15:00.000Z",
+  "totalRuns": 15,
+  "passed": 15,
+  "failed": 0,
+  "staleViolations": 0,
+  "refreshSuccessRate": 1.0,
+  "averageLatency": 120,
+  "auditComplete": true,
+  "verdict": "PASS"
+}

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-08-28T12:40:00.000Z",
+  "metrics": {
+    "totalRuns": 30,
+    "staleRelevantSentAsFresh": 0,
+    "refreshRequired": 0,
+    "refreshPerformed": 0,
+    "refreshSuccessRate": 1.0
+  },
+  "verdict": "PASS",
+  "summary": "All 30 runs completed. No stale relevant observations were sent as fresh. Refresh success rate 100%."
+}

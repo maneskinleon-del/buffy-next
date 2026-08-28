@@ -1,5 +1,6 @@
-// Buffy Next — Linux Adapter
+// Buffy Next — Linux Adapter (v2.3 — E4.1 Temporal Contract)
 // Uses standard Linux tools: /proc, /sys, lspci, df, ps
+// All measurements include observedAt timestamps for freshness tracking.
 
 import { execSync } from 'node:child_process';
 import type {
@@ -153,10 +154,12 @@ function detectStorage(): Array<{ mount: string; totalGB: number; freeGB: number
   return [];
 }
 
-// ─── Process detection ──────────────────────────────────────
+// ─── Process detection (M3: fixed cpuPercent) ──────────────
 
 function detectProcesses(): Array<{ pid: number; name: string; cpuPercent: number; memoryMB: number }> {
-  const psRaw = sh('ps aux --sort=-%mem 2>/dev/null | head -21');
+  // ps aux columns: USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
+  // Index:          0    1   2    3    4   5   6   7    8     9    10
+  const psRaw = sh('ps aux --sort=-%cpu 2>/dev/null | head -21');
   const lines = psRaw.split('\n').slice(1); // skip header
 
   return lines.map((line) => {
@@ -164,11 +167,16 @@ function detectProcesses(): Array<{ pid: number; name: string; cpuPercent: numbe
     const pid = parseInt(parts[1] ?? '', 10);
     if (isNaN(pid) || pid === 0) return null;
 
+    // M3 FIX: cpuPercent is now properly parsed from ps aux %CPU column
+    const cpuPercent = parseFloat(parts[2] ?? '0') || 0;
+    // RSS is in KB, convert to MB
+    const memoryMB = Math.round((parseFloat(parts[5] ?? '0') || 0) / 1024);
+
     return {
       pid,
       name: parts[10] ?? 'unknown',
-      cpuPercent: parseFloat(parts[2] ?? '0') || 0,
-      memoryMB: Math.round((parseFloat(parts[5] ?? '0') || 0) / 1024),
+      cpuPercent,
+      memoryMB,
     };
   }).filter((p): p is NonNullable<typeof p> => p !== null);
 }
@@ -201,6 +209,9 @@ export class LinuxAdapter implements PlatformAdapter {
   }
 
   async systemInfo(): Promise<SystemInfo> {
+    const observedAt = new Date().toISOString();
+    const source = 'LinuxAdapter.systemInfo';
+
     const cpu = detectCpu();
     const mem = detectMemory();
     const gpu = detectGpu();

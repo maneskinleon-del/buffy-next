@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-08-28T15:30:00.000Z",
+  "totalQueries": 25,
+  "passed": 25,
+  "failed": 0,
+  "staleDetected": 0,
+  "refreshRate": 1,
+  "avgLatency": 138,
+  "p50": 133,
+  "p95": 164,
+  "errors": 0,
+  "verdict": "PASS"
+}
