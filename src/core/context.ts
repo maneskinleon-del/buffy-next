@@ -1,7 +1,7 @@
 // Buffy Next — Context Package Builder
 // Transforms DoctorReport into a stable BuffyContext for external consumers
 
-import type { DoctorReport, BuffyContext } from './types.js';
+import type { DoctorReport, BuffyContext, HardwareField } from './types.js';
 
 const BUFFY_VERSION = '0.1.0';
 
@@ -20,7 +20,7 @@ export function buildContext(report: DoctorReport): BuffyContext {
   return {
     schema: 'buffy.context/v1',
     buffy_version: BUFFY_VERSION,
-    generated_at: report.timestamp,
+    generated_at: report.generatedAt,
 
     platform: {
       os: report.platform.name,
@@ -31,20 +31,20 @@ export function buildContext(report: DoctorReport): BuffyContext {
     },
 
     hardware: {
-      cpu: report.system.cpu.model || null,
+      cpu: hwField(report.system.cpu.model, 'string', report),
       cpu_cores: report.system.cpu.cores || null,
-      ram_gb: report.system.memory.totalGB || null,
-      ram_available_gb: report.system.memory.availableGB || null,
-      gpu: report.system.gpu.name || null,
-      gpu_driver: report.system.gpu.driver || null,
-      gpu_is_generic: report.system.gpu.isGeneric,
+      ram_gb: hwField(report.system.memory.totalGB, 'GB', report),
+      ram_available_gb: hwField(report.system.memory.availableGB, 'GB', report),
+      gpu: hwField(report.system.gpu.name, 'string', report),
+      gpu_driver: hwField(report.system.gpu.driver, 'string', report),
+      gpu_is_generic: hwField(report.system.gpu.isGeneric, 'boolean', report),
       storage: report.system.storage.map((d) => ({
         mount: d.mount,
         total_gb: d.totalGB,
         free_gb: d.freeGB,
         used_percent: d.usedPercent,
       })),
-      temperature_c: report.system.temperature?.cpuCelsius ?? null,
+      temperature_c: hwField(report.system.temperature?.cpuCelsius ?? null, '°C', report),
       process_groups: report.system.processGroups?.map(g => ({
         name: g.name,
         count: g.processCount,
@@ -140,4 +140,22 @@ function findToolVersion(report: DoctorReport, toolName: string): string | null 
     (c) => c.name === toolName && c.status === 'installed',
   );
   return tool?.version ?? null;
+}
+
+/**
+ * Wrap a primitive value into a HardwareField object.
+ * Uses the report's generatedAt as observedAt (per-field timestamps
+ * are not yet available from adapters — this preserves runtime behavior
+ * while satisfying the HardwareField type).
+ */
+function hwField(
+  value: number | string | boolean | null | undefined,
+  unit: string,
+  report: DoctorReport,
+): HardwareField | null {
+  // Treat null, undefined, and empty string as unknown
+  if (value == null || value === '') {
+    return { value: null, unit, observedAt: report.generatedAt, ageMs: 0, freshness: 'unknown', source: 'DoctorReport' };
+  }
+  return { value, unit, observedAt: report.generatedAt, ageMs: 0, freshness: 'observed', source: 'DoctorReport' };
 }

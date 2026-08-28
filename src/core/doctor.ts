@@ -12,13 +12,16 @@ export async function runDoctor(adapter: PlatformAdapter): Promise<DoctorReport>
 
   const items = analyzeSystem(system, capabilities);
 
+  const generatedAt = new Date().toISOString();
+
   return {
     platform,
     system,
     capabilities,
     privileges: system.privileges,
     items,
-    timestamp: new Date().toISOString(),
+    generatedAt,
+    timestamp: generatedAt,
   };
 }
 

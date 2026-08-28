@@ -29,6 +29,7 @@ function makeReport(overrides?: Partial<DoctorReport>): DoctorReport {
     ],
     privileges: { shell: true, shizuku: false, root: false, adb: false },
     items: [],
+    generatedAt: '2026-08-19T15:00:00.000Z',
     timestamp: '2026-08-19T15:00:00.000Z',
     ...overrides,
   };
@@ -107,9 +108,9 @@ describe('Context Package — null for unavailable data', () => {
       },
     });
     const ctx = buildContext(report);
-    // Empty string from adapter should become null in context
-    expect(ctx.hardware.gpu).toBe(null);
-    expect(ctx.hardware.gpu_driver).toBe(null);
+    // Empty string from adapter should become HardwareField with null value
+    expect(ctx.hardware.gpu?.value).toBe(null);
+    expect(ctx.hardware.gpu_driver?.value).toBe(null);
   });
 
   it('should use null for missing temperature', () => {
@@ -117,7 +118,8 @@ describe('Context Package — null for unavailable data', () => {
       system: { ...makeReport().system, temperature: null },
     });
     const ctx = buildContext(report);
-    expect(ctx.hardware.temperature_c).toBeNull();
+    // Temperature is null — hwField returns HardwareField with null value
+    expect(ctx.hardware.temperature_c?.value).toBeNull();
   });
 
   it('should use null for missing OS version', () => {
@@ -265,7 +267,7 @@ describe('Context Package — determinism', () => {
   });
 
   it('should produce stable timestamps', () => {
-    const report = makeReport({ timestamp: '2026-01-01T00:00:00.000Z' });
+    const report = makeReport({ generatedAt: '2026-01-01T00:00:00.000Z', timestamp: '2026-01-01T00:00:00.000Z' });
     const ctx = buildContext(report);
     expect(ctx.generated_at).toBe('2026-01-01T00:00:00.000Z');
   });
@@ -332,8 +334,8 @@ describe('Context Package — cross-platform shapes', () => {
     expect(ctx.platform.os_name).toBe('Windows 10 LTSC');
     expect(ctx.platform.os_version).toBe('10.0.19045');
     expect(ctx.platform.kernel).toBeNull();
-    expect(ctx.hardware.gpu).toBe('NVIDIA GeForce GTX 1650');
-    expect(ctx.hardware.gpu_is_generic).toBe(false);
+    expect(ctx.hardware.gpu?.value).toBe('NVIDIA GeForce GTX 1650');
+    expect(ctx.hardware.gpu_is_generic?.value).toBe(false);
   });
 
   it('should work with Android adapter shape', () => {

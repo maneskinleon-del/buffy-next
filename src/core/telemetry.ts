@@ -2,7 +2,8 @@
 // Minimal telemetry without heavy dependencies.
 // No PII or sensitive data stored.
 
-import type { CheckResult, GatedResult, AuditTrail } from './types.js';
+import type { CheckResult, GatedResult } from './types.js';
+import type { AuditTrail } from './diagnose.js';
 
 // ─── Types ─────────────────────────────────────────────────
 
