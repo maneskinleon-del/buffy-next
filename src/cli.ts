@@ -8,6 +8,7 @@ import { diagnose } from './core/diagnose.js';
 import { buildContext } from './core/context.js';
 import { findActionById } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
+import { BUFFY_VERSION } from './core/version.js';
 import {
   renderGreeting,
   renderDoctorReport,
@@ -48,6 +49,10 @@ async function main() {
     switch (command) {
       case '':
         await cmdGreeting(adapter);
+        break;
+      case '--version':
+      case '-V':
+        console.log(`buffy-next v${BUFFY_VERSION}`);
         break;
       case 'doctor':
         await cmdDoctor(adapter);
@@ -308,9 +313,10 @@ async function cmdMetrics() {
 
 function showHelp() {
   console.log(`
-Buffy — Asistente técnico de diagnóstico
+Buffy Next — Motor de operaciones con interfaz de asistente
 
 Uso:
+  buffy --version                 Versión de Buffy Next
   buffy                          Presentación + doctor rápido
   buffy doctor                   Auditoría completa del sistema
   buffy doctor --context         Contexto del sistema para agentes externos (JSON)

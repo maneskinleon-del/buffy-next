@@ -2,6 +2,57 @@
 
 All notable changes to Buffy Next will be documented in this file.
 
+## [0.2.2] - 2026-08-28
+
+### Onboarding & Version Consistency
+
+- **Single source of truth for version.** Added `src/core/version.ts` — reads `package.json` at runtime so `buffy health`, `buffy doctor --context`, and all public interfaces report the same version. Works under `tsx` (dev) and the esbuild bundle (`dist/cli.js`).
+- **`buffy --version` flag.** CLI now reports the version directly (`buffy-next v0.2.2`).
+- **`buffy health` reports version.** `getHealthStatus()` now includes `version: BUFFY_VERSION` in its output.
+- **README hardened.** Warning about npm `buffy` package (different project) and clear installation instructions from git clone.
+- **docs-install.test.ts.** Validates that README instructions produce a working build.
+
+#### Files Added
+
+- `src/core/version.ts` — package.json reader for version identity
+- `tests/docs-install.test.ts` — install instruction validation
+
+#### Files Modified
+
+- `src/cli.ts` — imports version.ts, adds `--version`/`-V` flag
+- `src/core/telemetry.ts` — version in health status
+- `README.md` — installation instructions, npm warning
+
+#### Verified
+
+- 569/569 tests pass
+- Typecheck clean
+- `buffy --version` → `buffy-next v0.2.2`
+- `buffy health` → `version: 0.2.2`
+
+---
+
+## [0.2.1] - 2026-08-28
+
+### Typecheck Cleanup
+
+Maintenance release — resolves 10 pre-existing TypeScript errors from E4.1 type migration without changing runtime behavior.
+
+#### Files Modified
+
+- `src/core/context.ts` — Use `generatedAt`, wrap hardware values in `HardwareField` with `observedAt`, `ageMs`, `freshness`, `source`
+- `src/core/doctor.ts` — Add `generatedAt` field to `DoctorReport`
+- `src/core/telemetry.ts` — Fix `AuditTrail` import path
+- `tests/context.test.ts` — Updated assertions for new HardwareField shape
+
+#### Verified
+
+- 569/569 tests pass
+- Typecheck clean
+- 0 runtime behavior changes
+
+---
+
 ## [0.4.0] - 2026-08-20
 
 ### Diagnostic Architecture Upgrade
