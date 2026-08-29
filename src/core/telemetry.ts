@@ -4,6 +4,7 @@
 
 import type { CheckResult, GatedResult } from './types.js';
 import type { AuditTrail } from './diagnose.js';
+import { BUFFY_VERSION } from './version.js';
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -346,14 +347,14 @@ export function getHealthStatus(
       actions: 'ok',
       state: 'ok',
     },
-    metrics: {
-      totalRequests,
-      totalErrors,
-      staleRate: patterns.staleRate,
-      averageLatencyMs: baseline?.totalLatencyMs ?? 0,
-    },
-    version: '2.4.0',
-  };
+  metrics: {
+    totalRequests,
+    totalErrors,
+    staleRate: patterns.staleRate,
+    averageLatencyMs: baseline?.totalLatencyMs ?? 0,
+  },
+  version: BUFFY_VERSION,
+};
 }
 
 // ─── Reset (for testing) ───────────────────────────────────

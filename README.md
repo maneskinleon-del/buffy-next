@@ -17,10 +17,23 @@ Es un motor de operaciones que otros agentes (Claude, Gemini, Freebuff, MCP) pue
 
 ## Instalación
 
+> ⚠️ El paquete npm público `buffy` **no es** Buffy Next. Es un módulo de terceros
+> para lectura/escritura de datos binarios (felixge/node-buffy). No lo instales:
+> no corresponde a este proyecto.
+
+Instala Buffy Next desde el repositorio clonado:
+
 ```bash
-npm install -g buffy
+git clone https://github.com/maneskinleon-del/buffy-next
+cd buffy-next
+npm install
+npm run build
+npm install -g .
 buffy setup
 ```
+
+Esto compila la CLI a `dist/cli.js` e instala el comando `buffy` globalmente
+apuntando a este repositorio.
 
 ## Comandos
 

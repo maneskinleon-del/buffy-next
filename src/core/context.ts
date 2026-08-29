@@ -2,8 +2,7 @@
 // Transforms DoctorReport into a stable BuffyContext for external consumers
 
 import type { DoctorReport, BuffyContext, HardwareField } from './types.js';
-
-const BUFFY_VERSION = '0.1.0';
+import { BUFFY_VERSION } from './version.js';
 
 /**
  * Build a BuffyContext from a DoctorReport.

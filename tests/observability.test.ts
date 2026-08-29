@@ -15,6 +15,7 @@ import {
   getHealthStatus,
   resetTelemetry,
 } from '../src/core/telemetry.js';
+import { BUFFY_VERSION } from '../src/core/version.js';
 import type { GatedResult, AuditTrail, FreshnessTelemetry } from '../src/core/types.js';
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -331,7 +332,7 @@ describe('Telemetry — Health', () => {
     expect(health.adapter).toBe('LinuxAdapter');
     expect(health.subsystems.observation).toBe('ok');
     expect(health.subsystems.freshness).toBe('ok');
-    expect(health.version).toBe('2.4.0');
+    expect(health.version).toBe(BUFFY_VERSION);
   });
 
   it('should report error state when errors exist', () => {
