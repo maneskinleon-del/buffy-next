@@ -35,6 +35,13 @@ buffy setup
 Esto compila la CLI a `dist/cli.js` e instala el comando `buffy` globalmente
 apuntando a este repositorio.
 
+### ¿Complementar con Buffy Context? (opcional)
+
+Puedes quedarte tal cual: Buffy Next es autosuficiente. Si quieres que tu agente
+tenga además memoria persistente, knowledge y skills entre sesiones, existe el
+proyecto **opcional e independiente** [Buffy Context](https://github.com/maneskinleon-del/buffy-context).
+Ver la sección [Optional companion: Buffy Context](#optional-companion-buffy-context).
+
 ## Comandos
 
 ```
@@ -65,6 +72,36 @@ CLI → doctor/diagnose/act → Check Selector → Adapter → Diagnosis → Act
 ```
 
 **Core portable** + adapters de plataforma (PowerShell/bash). El core NO conoce WMI, `/proc/stat`, ni ADB.
+
+## Optional companion: Buffy Context
+
+Buffy Next funciona perfectamente solo. No depende de ningún otro proyecto ni de LLMs.
+
+Existe un proyecto hermano **independiente y opcional** que cubre la capa que Buffy
+Next deliberadamente no tiene (memoria):
+
+| | Rol |
+|---|---|
+| **Buffy Next** (este repo) | Entorno vivo: observación del sistema, freshness, diagnóstico y acciones seguras (ActionGate) |
+| **[Buffy Context](https://github.com/maneskinleon-del/buffy-context)** | Memoria: persistencia entre sesiones, knowledge, skills, sesión y handoff |
+
+```
+                    AGENTE
+                  /        \
+            Buffy Next   Buffy Context
+              entorno       memoria
+```
+
+- **Repositorios independientes**: no hay dependencia de código, de runtime ni de
+  npm entre ellos. Ninguno importa del otro.
+- **Buffy Context es opcional**: sin él, Buffy Next hace todo lo documentado aquí,
+  con el mismo contrato `buffy.context/v1` y el mismo modelo de seguridad.
+- **¿Cuándo conviene usar ambos?** Cuando tu agente necesita recordar entre
+  sesiones: memoria persistente, knowledge técnico por tarea y skills. La
+  integración ocurre **en el nivel del agente** (el agente lee el contexto
+  persistente de Buffy Context y consulta a Buffy Next para el estado actual del
+  sistema), nunca por acoplamiento entre repos.
+- Detalles de arquitectura y estado de adopción: [`docs/COMPANION-ARCHITECTURE.md`](docs/COMPANION-ARCHITECTURE.md) · [`docs/COMPANION-READINESS.md`](docs/COMPANION-READINESS.md).
 
 ## Desarrollo
 
