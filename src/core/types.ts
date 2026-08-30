@@ -1,6 +1,9 @@
 // Buffy Next — Core Types (v2.4 — Freshness Gating E4.2)
 // ActionDefinition is metadata-only. Physical execution is exclusively via ActionGate.
 
+import type { ExecutionEvidenceRecord } from './execution-evidence.js';
+export type { ExecutionEvidenceRecord };
+
 // ─── Platform ──────────────────────────────────────────────
 
 export type PlatformName = 'windows' | 'android-termux' | 'linux';
@@ -117,6 +120,13 @@ export interface ActionDefinition {
   reversible: boolean;
   platforms: PlatformName[];
   prerequisites: string[];
+  /**
+   * Whether the action's expected postcondition is independently observable
+   * via adapter re-observation (ExecutionEvidence VERIFIED path). When false
+   * or absent, the evidence ceiling is OBSERVED_EXECUTED — a property of the
+   * action, not an evidence-system bug. Catalog curation pending.
+   */
+  verifiable?: boolean;
 }
 
 export interface ActionResult {
@@ -393,6 +403,9 @@ export interface BuffyState {
   platform?: string;
   system?: Partial<SystemInfo>;
   actionHistory: ActionRecord[];
+  /** ExecutionEvidence ledger (own actions/deliveries). Rotated separately
+   *  from actionHistory — rotating a record out yields UNKNOWN_NO_EVIDENCE. */
+  evidence?: ExecutionEvidenceRecord[];
   preferences?: { language: string };
 }
 
