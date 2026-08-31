@@ -75,6 +75,17 @@ export interface EvidencePostcondition {
   source: string;
 }
 
+// ─── Compound records (Wiring Gate Q2) ─────────────────────
+//
+// One compound record per execution request that reached execStore.start.
+// attempts[] preserves failures verbatim (Q4: a failed attempt is NEVER
+// promoted to OBSERVED_EXECUTED); the level derives from the FINAL outcome.
+
+export interface ExecutionAttempt {
+  outcome: 'success' | 'failed' | 'exception';
+  detail?: string;
+}
+
 export interface ExecutionEvidenceRecord {
   actionId: string;
   surface: ExecutionSurface;
@@ -89,6 +100,11 @@ export interface ExecutionEvidenceRecord {
   /** Mandatory for indirect/artifact-only and for provisional states. */
   evidenceNote?: string;
   postcondition?: EvidencePostcondition;
+  /** Identity of the execution unit (execStore.executionId) — dedupe key. */
+  executionId?: string;
+  /** Per-attempt outcomes, in order. Present only on compound records
+   *  (Wiring Gate); absent on Fase-1 single-pass records. */
+  attempts?: ExecutionAttempt[];
 }
 
 export interface EvidenceInput {
@@ -108,6 +124,10 @@ export interface EvidenceInput {
   postcondition?: EvidencePostcondition;
   evidenceNote?: string;
   correlationId?: string;
+  /** Wiring Gate: per-attempt outcomes (compound record path). */
+  executionId?: string;
+  attempts?: ExecutionAttempt[];
+  finalOutcome?: 'success' | 'failed' | 'exception';
 }
 
 // ─── Classifier ────────────────────────────────────────────
@@ -164,41 +184,80 @@ export function classifyEvidence(input: EvidenceInput): ExecutionEvidenceRecord 
   }
 
   // S1 — own actions (ActionGate surface).
-  if (input.executionRecord?.completed) {
-    const post = input.postcondition;
-    if (post && post.matched && post.source !== input.executionRecord.source) {
-      return { ...base, level: 'VERIFIED', source: input.executionRecord.source, postcondition: post };
+  // Compound path (Wiring Gate): takes precedence when attempts/finalOutcome
+  // are provided. Level derives from the FINAL outcome (Q4: failed attempts
+  // never become OBSERVED_EXECUTED); failures are preserved in attempts[].
+  if (input.surface === 'self-action' && (input.attempts !== undefined || input.finalOutcome !== undefined)) {
+    const compoundBase = {
+      ...base,
+      source: 'action-gate',
+      executionId: input.executionId,
+      attempts: input.attempts,
+    };
+    if (input.finalOutcome === 'success') {
+      const post = input.postcondition;
+      if (post?.matched && post.source !== 'action-gate') {
+        return { ...compoundBase, level: 'VERIFIED', postcondition: post };
+      }
+      return {
+        ...compoundBase,
+        level: 'OBSERVED_EXECUTED',
+        postcondition: post,
+        evidenceNote: input.evidenceNote,
+      };
     }
-    // Ceiling: OBSERVED_EXECUTED. Either no verifiable postcondition, or the
-    // confirmation came from the executor itself (self-attestation guard).
     return {
-      ...base,
-      level: 'OBSERVED_EXECUTED',
-      source: input.executionRecord.source,
-      postcondition: post,
-      evidenceNote: post
-        ? 'postcondition not independently confirmed (self-attestation or unmatched)'
-        : input.evidenceNote,
-    };
-  }
-
-  // No completed record. Window covers the action → evidence was examined,
-  // confirmation not found (may include a failed attempt — still NOT_VERIFIED:
-  // "not verified as executed", never "did not occur").
-  if (input.windowCoversAction === true) {
-    return {
-      ...base,
+      ...compoundBase,
       level: 'NOT_VERIFIED',
-      source: 'state.json',
-      evidenceNote: input.evidenceNote ?? 'no execution record found in covered window',
+      evidenceNote: input.evidenceNote ?? `final outcome: ${input.finalOutcome ?? 'failed'}`,
     };
   }
 
-  // Window does not cover the action: evidence expired / rotated / process gone.
+  if (input.surface === 'self-action') {
+    if (input.executionRecord?.completed) {
+      const post = input.postcondition;
+      if (post && post.matched && post.source !== input.executionRecord.source) {
+        return { ...base, level: 'VERIFIED', source: input.executionRecord.source, postcondition: post };
+      }
+      // Ceiling: OBSERVED_EXECUTED. Either no verifiable postcondition, or the
+      // confirmation came from the executor itself (self-attestation guard).
+      return {
+        ...base,
+        level: 'OBSERVED_EXECUTED',
+        source: input.executionRecord.source,
+        postcondition: post,
+        evidenceNote: post
+          ? 'postcondition not independently confirmed (self-attestation or unmatched)'
+          : input.evidenceNote,
+      };
+    }
+
+    // No completed record. Window covers the action → evidence was examined,
+    // confirmation not found (may include a failed attempt — still NOT_VERIFIED:
+    // "not verified as executed", never "did not occur").
+    if (input.windowCoversAction === true) {
+      return {
+        ...base,
+        level: 'NOT_VERIFIED',
+        source: 'state.json',
+        evidenceNote: input.evidenceNote ?? 'no execution record found in covered window',
+      };
+    }
+
+    // Window does not cover the action: evidence expired / rotated / process gone.
+    return {
+      ...base,
+      level: 'UNKNOWN_NO_EVIDENCE',
+      source: 'state.json',
+      evidenceNote: input.evidenceNote ?? 'evidence window does not cover the action (rotation or process lifetime)',
+    };
+  }
+
+  // Defensive fallback: unreachable — the three surfaces return above.
   return {
     ...base,
     level: 'UNKNOWN_NO_EVIDENCE',
-    source: 'state.json',
-    evidenceNote: input.evidenceNote ?? 'evidence window does not cover the action (rotation or process lifetime)',
+    source: 'none',
+    evidenceNote: 'unreachable surface',
   };
 }

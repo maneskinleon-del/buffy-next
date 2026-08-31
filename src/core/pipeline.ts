@@ -14,8 +14,9 @@ import { execSync } from 'node:child_process';
 import type { ActionDefinition, ActionResult, ActionExecutor, CanonicalRequest, PlatformAdapter, PromptProvider } from './types.js';
 import type { ExecutorRegistry } from './executor-registry.js';
 import { ActionGate } from './action-gate.js';
+import { classifyEvidence } from './execution-evidence.js';
 import { renderActionResult, toJSON } from './presenter.js';
-import { loadState, updateState } from '../state/store.js';
+import { loadState, updateState, recordEvidence } from '../state/store.js';
 import { getAllActions } from '../actions/registry.js';
 
 /**
@@ -455,6 +456,42 @@ async function executeWithGatesInternal(options: {
         { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
       ].slice(-50),
     });
+  }
+
+  // ExecutionEvidence — observational emission (Wiring Gate).
+  // SYNC: this block is DUPLICATED in pipeline.test-harness.ts (the harness
+  // keeps its own copy of executeWithGatesInternal for test isolation).
+  // Any change here MUST be mirrored there — TECH DEBT named, not scheduled:
+  // a shared implementation would remove this constraint.
+  // Strictly AFTER gate.execute returns; never alters the execution flow.
+  // Zero execStore records (pre-executor rejections, jsonMode) → zero records.
+  try {
+    const execRecords = gate.getExecutionStore().allRecords();
+    if (execRecords.length > 0) {
+      const attempts = execRecords.map((r) => ({
+        outcome: r.state === 'failed'
+          ? ('exception' as const)
+          : r.result?.success ? ('success' as const) : ('failed' as const),
+        detail: r.result?.message,
+      }));
+      const finalOutcome = attempts[attempts.length - 1]?.outcome;
+      const evidenceRecord = classifyEvidence({
+        surface: 'self-action',
+        actionId: action.id,
+        observedAt: new Date().toISOString(),
+        executionId: execRecords[execRecords.length - 1]?.executionId,
+        attempts,
+        finalOutcome,
+        windowCoversAction: true,
+      });
+      updateState({ evidence: recordEvidence(loadState(), evidenceRecord).evidence });
+    }
+  } catch (error) {
+    // Evidence emission must never break the execution flow — but it must
+    // never fail SILENTLY either: a swallowed failure would create a hidden
+    // ledger gap, i.e. exactly the delivery≠execution blind spot this
+    // system exists to prevent.
+    console.error('[buffy:evidence] emission failed — ledger gap possible:', error);
   }
 
   return result;

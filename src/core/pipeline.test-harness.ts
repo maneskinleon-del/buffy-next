@@ -6,8 +6,9 @@ import { execSync } from 'node:child_process';
 import type { ActionDefinition, ActionResult, ActionExecutor, CanonicalRequest, PlatformAdapter, PromptProvider } from './types.js';
 import type { ExecutorRegistry } from './executor-registry.js';
 import { ActionGate } from './action-gate.js';
+import { classifyEvidence } from './execution-evidence.js';
 import { renderActionResult, toJSON } from './presenter.js';
-import { loadState, updateState } from '../state/store.js';
+import { loadState, updateState, recordEvidence } from '../state/store.js';
 import { getAllActions } from '../actions/registry.js';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -227,6 +228,38 @@ async function executeWithGatesInternal(options: {
         { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
       ].slice(-50),
     });
+  }
+
+  // ExecutionEvidence — observational emission (Wiring Gate). Mirrors the
+  // production block in pipeline.ts so tests exercise the same path.
+  // SYNC: this block is DUPLICATED from pipeline.ts — any change there MUST
+  // be mirrored here (TECH DEBT named, not scheduled: the harness keeps its
+  // own copy of executeWithGatesInternal for test isolation).
+  try {
+    const execRecords = gate.getExecutionStore().allRecords();
+    if (execRecords.length > 0) {
+      const attempts = execRecords.map((r) => ({
+        outcome: r.state === 'failed'
+          ? ('exception' as const)
+          : r.result?.success ? ('success' as const) : ('failed' as const),
+        detail: r.result?.message,
+      }));
+      const finalOutcome = attempts[attempts.length - 1]?.outcome;
+      const evidenceRecord = classifyEvidence({
+        surface: 'self-action',
+        actionId: action.id,
+        observedAt: new Date().toISOString(),
+        executionId: execRecords[execRecords.length - 1]?.executionId,
+        attempts,
+        finalOutcome,
+        windowCoversAction: true,
+      });
+      updateState({ evidence: recordEvidence(loadState(), evidenceRecord).evidence });
+    }
+  } catch (error) {
+    // Same contract as the production block: never break the flow, never
+    // fail silently.
+    console.error('[buffy:evidence] emission failed — ledger gap possible:', error);
   }
 
   return result;
