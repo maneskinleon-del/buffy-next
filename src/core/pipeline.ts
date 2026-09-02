@@ -451,28 +451,10 @@ async function executeWithGatesInternal(options: {
 
   const result = await gate.execute(action.id, rawParams);
 
-  if (resultJsonMode) {
-    console.log(toJSON({ ...result, actionId: action.id }));
-  } else {
-    console.log(renderActionResult(result));
-  }
-
-  if (result.success) {
-    updateState({
-      actionHistory: [
-        ...loadState().actionHistory,
-        { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
-      ].slice(-50),
-    });
-  }
-
-  // ExecutionEvidence — observational emission (Wiring Gate).
-  // SYNC: this block is DUPLICATED in pipeline.test-harness.ts (the harness
-  // keeps its own copy of executeWithGatesInternal for test isolation).
-  // Any change here MUST be mirrored there — TECH DEBT named, not scheduled:
-  // a shared implementation would remove this constraint.
-  // Strictly AFTER gate.execute returns; never alters the execution flow.
-  // Zero execStore records (pre-executor rejections, jsonMode) → zero records.
+  // ExecutionEvidence — classify BEFORE serialization so evidence is available
+  // for --result-json output. classifyEvidence() is pure (no side effects);
+  // persistence happens separately below.
+  let evidenceRecord: import('./execution-evidence.js').ExecutionEvidenceRecord | undefined;
   try {
     const execRecords = gate.getExecutionStore().allRecords();
     if (execRecords.length > 0) {
@@ -483,7 +465,7 @@ async function executeWithGatesInternal(options: {
         detail: r.result?.message,
       }));
       const finalOutcome = attempts[attempts.length - 1]?.outcome;
-      const evidenceRecord = classifyEvidence({
+      evidenceRecord = classifyEvidence({
         surface: 'self-action',
         actionId: action.id,
         observedAt: new Date().toISOString(),
@@ -492,14 +474,39 @@ async function executeWithGatesInternal(options: {
         finalOutcome,
         windowCoversAction: true,
       });
-      updateState({ evidence: recordEvidence(loadState(), evidenceRecord).evidence });
     }
   } catch (error) {
-    // Evidence emission must never break the execution flow — but it must
-    // never fail SILENTLY either: a swallowed failure would create a hidden
-    // ledger gap, i.e. exactly the delivery≠execution blind spot this
-    // system exists to prevent.
-    console.error('[buffy:evidence] emission failed — ledger gap possible:', error);
+    console.error('[buffy:evidence] classification failed:', error);
+  }
+
+  // CLI output — serialize result (with evidence projection for --result-json)
+  if (resultJsonMode) {
+    const evidenceProjection = evidenceRecord ? {
+      level: evidenceRecord.level,
+      observedAt: evidenceRecord.observedAt,
+      attempts: evidenceRecord.attempts,
+    } : undefined;
+    console.log(toJSON({ ...result, actionId: action.id, evidence: evidenceProjection }));
+  } else {
+    console.log(renderActionResult(result));
+  }
+
+  // Persist action history and evidence ledger (side effects, after serialization)
+  if (result.success) {
+    updateState({
+      actionHistory: [
+        ...loadState().actionHistory,
+        { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
+      ].slice(-50),
+    });
+  }
+
+  if (evidenceRecord) {
+    try {
+      updateState({ evidence: recordEvidence(loadState(), evidenceRecord).evidence });
+    } catch (error) {
+      console.error('[buffy:evidence] persistence failed — ledger gap possible:', error);
+    }
   }
 
   return result;

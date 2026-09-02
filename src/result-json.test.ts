@@ -64,6 +64,28 @@ describe('--result-json (real execution + structured output)', () => {
     expect(data.success).toBe(true);
   });
 
+  it('evidence.level is present and comes from classifyEvidence()', async () => {
+    const { stdout } = await runBuffy(['act', 'check-network', '--result-json']);
+    const data = JSON.parse(stdout);
+    expect(data.evidence).toBeDefined();
+    expect(data.evidence.level).toBe('OBSERVED_EXECUTED');
+  });
+
+  it('evidence.observedAt is an ISO timestamp', async () => {
+    const { stdout } = await runBuffy(['act', 'check-network', '--result-json']);
+    const data = JSON.parse(stdout);
+    expect(data.evidence.observedAt).toBeDefined();
+    expect(new Date(data.evidence.observedAt).toISOString()).toBe(data.evidence.observedAt);
+  });
+
+  it('evidence.attempts is an array with outcome', async () => {
+    const { stdout } = await runBuffy(['act', 'check-network', '--result-json']);
+    const data = JSON.parse(stdout);
+    expect(Array.isArray(data.evidence.attempts)).toBe(true);
+    expect(data.evidence.attempts.length).toBeGreaterThan(0);
+    expect(data.evidence.attempts[0].outcome).toBe('success');
+  });
+
   it('F: --json still behaves as dry-run preview', async () => {
     const { stdout } = await runBuffy(['act', 'check-network', '--json']);
     const data = JSON.parse(stdout);
