@@ -176,7 +176,7 @@ server.tool(
       .describe("Optional arguments for the action (e.g., tool name for 'install-tool')."),
   },
   async ({ actionId, args }) => {
-    const cliArgs = ["act", actionId];
+    const cliArgs = ["act", actionId, "--result-json"];
     if (args) cliArgs.push(args);
 
     const { stdout, stderr, error } = await runBuffy(cliArgs, TIMEOUT_MS.action);

@@ -30,6 +30,7 @@ import {
 const args = process.argv.slice(2);
 const command = args[0] || '';
 const jsonMode = args.includes('--json');
+const resultJsonMode = args.includes('--result-json');
 const contextMode = args.includes('--context');
 const pilotMode = args.includes('--pilot');
 
@@ -196,7 +197,7 @@ async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, action
   }
 
   // Pass rawParams through the pipeline — no setInstallTarget, no global state
-  await executeWithGates({ adapter, action, rawParams, jsonMode, promptUser });
+  await executeWithGates({ adapter, action, rawParams, jsonMode, resultJsonMode, promptUser });
 }
 
 async function cmdSetup(adapter: Awaited<ReturnType<typeof createAdapter>>) {
@@ -334,6 +335,7 @@ Uso:
   buffy diagnose "query" --pilot Modo piloto con telemetry
   buffy act <action-id> [args]    Ejecutar una acción
     ej: buffy act install-tool node
+    --result-json                Ejecutar y devolver resultado como JSON estructurado
   buffy setup                    Bootstrap de Buffy
   buffy health                   Estado de salud del sistema
   buffy metrics                  Métricas agregadas

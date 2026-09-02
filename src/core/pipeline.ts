@@ -30,6 +30,8 @@ export interface PipelineOptions {
   /** Raw parameters from the caller (e.g., tool name for install-tool) */
   rawParams?: string;
   jsonMode?: boolean;
+  /** Execute for real and return ActionResult as structured JSON (not preview). */
+  resultJsonMode?: boolean;
   promptUser?: PromptProvider;
 }
 
@@ -407,13 +409,13 @@ export async function executeWithGates(options: PipelineOptions): Promise<Action
   // SECURITY: reject injection of executors or action overrides
   assertNoDisallowedFields(options as unknown as Record<string, unknown>);
 
-  const { adapter, action, rawParams, jsonMode = false, promptUser } = options;
+  const { adapter, action, rawParams, jsonMode = false, resultJsonMode = false, promptUser } = options;
 
   // Public path: always use real actions and private executors
   const actionDefs = getAllActions();
   const registry = buildRegistry();
 
-  return executeWithGatesInternal({ adapter, action, rawParams, jsonMode, promptUser, actionDefs, registry });
+  return executeWithGatesInternal({ adapter, action, rawParams, jsonMode, resultJsonMode, promptUser, actionDefs, registry });
 }
 
 /**
@@ -427,11 +429,12 @@ async function executeWithGatesInternal(options: {
   action: ActionDefinition;
   rawParams?: string;
   jsonMode?: boolean;
+  resultJsonMode?: boolean;
   promptUser?: PromptProvider;
   actionDefs: ActionDefinition[];
   registry: ExecutorRegistry;
 }): Promise<ActionResult> {
-  const { adapter, action, rawParams, jsonMode = false, promptUser, actionDefs, registry } = options;
+  const { adapter, action, rawParams, jsonMode = false, resultJsonMode = false, promptUser, actionDefs, registry } = options;
 
   const gate = new ActionGate({
     adapter,
@@ -447,7 +450,12 @@ async function executeWithGatesInternal(options: {
   }
 
   const result = await gate.execute(action.id, rawParams);
-  console.log(renderActionResult(result));
+
+  if (resultJsonMode) {
+    console.log(toJSON({ ...result, actionId: action.id }));
+  } else {
+    console.log(renderActionResult(result));
+  }
 
   if (result.success) {
     updateState({

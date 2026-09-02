@@ -199,11 +199,12 @@ async function executeWithGatesInternal(options: {
   action: ActionDefinition;
   rawParams?: string;
   jsonMode?: boolean;
+  resultJsonMode?: boolean;
   promptUser?: PromptProvider;
   actionDefs: ActionDefinition[];
   registry: ExecutorRegistry;
 }): Promise<ActionResult> {
-  const { adapter, action, rawParams, jsonMode = false, promptUser, actionDefs, registry } = options;
+  const { adapter, action, rawParams, jsonMode = false, resultJsonMode = false, promptUser, actionDefs, registry } = options;
 
   const gate = new ActionGate({
     adapter,
@@ -219,7 +220,12 @@ async function executeWithGatesInternal(options: {
   }
 
   const result = await gate.execute(action.id, rawParams);
-  console.log(renderActionResult(result));
+
+  if (resultJsonMode) {
+    console.log(toJSON({ ...result, actionId: action.id }));
+  } else {
+    console.log(renderActionResult(result));
+  }
 
   if (result.success) {
     updateState({
