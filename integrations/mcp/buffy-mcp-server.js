@@ -131,11 +131,11 @@ server.tool(
 
 server.tool(
   "buffy_capabilities",
-  "List all available Buffy actions and their security levels. Use this to discover what actions are available before calling buffy_action.",
+  "List all available Buffy actions with their IDs, descriptions, security levels (auto_safe/confirm/forbidden), platform support, and verification semantics. Call this BEFORE buffy_action to discover what actions exist and which one to use.",
   {},
   async () => {
     const { stdout, stderr, error } = await runBuffy(
-      ["capabilities", "--json"],
+      ["actions", "--json"],
       TIMEOUT_MS.capabilities,
     );
 
@@ -161,26 +161,14 @@ server.tool(
 
 // ---- Tool: buffy_action ----
 
-const ACTION_ID_EXAMPLES = [
-  "check-gpu-driver",
-  "check-network",
-  "check-system-temp",
-  "check-disk-space",
-  "list-processes",
-  "install-tool",
-  "change-power-plan",
-  "check-shizuku",
-  "check-driver-status",
-].join(", ");
-
 server.tool(
   "buffy_action",
-  `Execute a Buffy action through the ActionGate. Actions are system operations (diagnostics, checks, reversible changes). The ActionGate enforces security policies (AUTO_SAFE, CONFIRM, FORBIDDEN). Use buffy_capabilities first to discover available actions.\n\nValid action IDs: ${ACTION_ID_EXAMPLES}`,
+  "Execute a Buffy action by its ID. The ActionGate enforces security policies (auto_safe = runs without confirmation, confirm = requires user approval, forbidden = blocked). Use buffy_capabilities first to discover available action IDs and their requirements.",
   {
     actionId: z
       .string()
       .describe(
-        `The action ID to execute. Examples: ${ACTION_ID_EXAMPLES}`,
+        "The action ID to execute (e.g. 'check-network'). Get valid IDs from buffy_capabilities."
       ),
     args: z
       .string()

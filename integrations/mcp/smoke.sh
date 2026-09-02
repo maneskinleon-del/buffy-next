@@ -45,16 +45,31 @@ else
   fail "doctor --context did not return valid JSON" "$(echo "$CONTEXT" | head -3)"
 fi
 
-# ── T3: buffy capabilities --json ──────────────────────────────────────────
+# ── T3: buffy actions --json (action catalog) ──────────────────────────────
+ACTIONS=$(node "$CLI" actions --json 2>&1)
+if echo "$ACTIONS" | python3 -c "import sys,json; d=json.load(sys.stdin); assert isinstance(d, list) and len(d) > 0" 2>/dev/null; then
+  ACTIONS_COUNT=$(echo "$ACTIONS" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+  # Verify each action has required fields
+  HAS_ID=$(echo "$ACTIONS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(all('id' in a and 'name' in a and 'description' in a and 'level' in a and 'platforms' in a for a in d))")
+  if [ "$HAS_ID" = "True" ]; then
+    pass "actions --json returns $ACTIONS_COUNT actions with id/name/description/level/platforms"
+  else
+    fail "actions --json missing required fields" "Some actions lack id/name/description/level/platforms"
+  fi
+else
+  fail "actions --json did not return valid non-empty array" "$(echo "$ACTIONS" | head -3)"
+fi
+
+# ── T4: buffy capabilities --json (legacy system tools) ────────────────────
 CAPS=$(node "$CLI" capabilities --json 2>&1)
 if echo "$CAPS" | python3 -c "import sys,json; d=json.load(sys.stdin); assert isinstance(d, list)" 2>/dev/null; then
   CAPS_COUNT=$(echo "$CAPS" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-  pass "capabilities --json returns array ($CAPS_COUNT tools)"
+  pass "capabilities --json returns array ($CAPS_COUNT system tools)"
 else
   fail "capabilities --json did not return valid array" "$(echo "$CAPS" | head -3)"
 fi
 
-# ── T4: buffy act with invalid action ──────────────────────────────────────
+# ── T5: buffy act with invalid action ──────────────────────────────────────
 INVALID_EXIT=0
 node "$CLI" act invalid-action-nonexistent 2>&1 || INVALID_EXIT=$?
 if [ "$INVALID_EXIT" -ne 0 ]; then
@@ -63,7 +78,7 @@ else
   fail "act with invalid action should exit non-zero" "exit: $INVALID_EXIT"
 fi
 
-# ── T5: buffy act check-network (real safe action) ─────────────────────────
+# ── T6: buffy act check-network (real safe action) ─────────────────────────
 ACT_OUT=$(node "$CLI" act check-network 2>&1)
 ACT_EXIT=$?
 if [ "$ACT_EXIT" -eq 0 ] && echo "$ACT_OUT" | grep -qi 'red\|network\|ping\|OK'; then

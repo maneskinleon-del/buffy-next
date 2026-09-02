@@ -6,7 +6,7 @@ import { createAdapter } from './adapters/index.js';
 import { runDoctor } from './core/doctor.js';
 import { diagnose } from './core/diagnose.js';
 import { buildContext } from './core/context.js';
-import { findActionById } from './actions/registry.js';
+import { findActionById, getAllActions } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
 import { BUFFY_VERSION } from './core/version.js';
 import {
@@ -62,6 +62,9 @@ async function main() {
         break;
       case 'diagnose':
         await cmdDiagnose(adapter, args.slice(1).join(' '));
+        break;
+      case 'actions':
+        cmdActions();
         break;
       case 'act':
         await cmdAct(adapter, args[1], args[2]);
@@ -171,6 +174,11 @@ async function cmdDiagnose(adapter: Awaited<ReturnType<typeof createAdapter>>, q
     console.log(`  Latency: ${response.audit.latencyMs}ms`);
     console.log(`  Context: ${response.audit.contextBytes} bytes`);
   }
+}
+
+function cmdActions() {
+  const actions = getAllActions();
+  console.log(toJSON(actions));
 }
 
 async function cmdAct(adapter: Awaited<ReturnType<typeof createAdapter>>, actionId: string | undefined, rawParams?: string) {
@@ -320,7 +328,8 @@ Uso:
   buffy                          Presentación + doctor rápido
   buffy doctor                   Auditoría completa del sistema
   buffy doctor --context         Contexto del sistema para agentes externos (JSON)
-  buffy capabilities             Qué puede hacer Buffy
+  buffy actions --json            Catálogo de acciones (JSON)
+  buffy capabilities             Herramientas instaladas
   buffy diagnose "tu problema"   Diagnóstico dirigido
   buffy diagnose "query" --pilot Modo piloto con telemetry
   buffy act <action-id> [args]    Ejecutar una acción
