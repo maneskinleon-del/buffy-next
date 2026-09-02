@@ -75,13 +75,19 @@ describe('buffy capabilities --json (legacy)', () => {
     expect(data.length).toBeGreaterThan(0);
   });
 
-  it('each entry has name/status/version', async () => {
+  it('each entry has name/status, and version when installed', async () => {
     const { stdout } = await runBuffy(['capabilities', '--json']);
     const data = JSON.parse(stdout);
     for (const tool of data) {
       expect(tool).toHaveProperty('name');
       expect(tool).toHaveProperty('status');
-      expect(tool).toHaveProperty('version');
+      expect(['installed', 'missing', 'unknown']).toContain(tool.status);
+      if (tool.status === 'installed') {
+        expect(tool).toHaveProperty('version');
+        expect(typeof tool.version).toBe('string');
+        expect(tool.version.length).toBeGreaterThan(0);
+      }
+      // missing/unknown tools may not have version (Capability.version is optional)
     }
   });
 });
