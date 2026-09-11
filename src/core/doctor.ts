@@ -115,6 +115,8 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
   // Platform privileges check (Android: Shell / Shizuku / Root / ADB)
   const priv = system.privileges;
   if (priv) {
+    const shizukuCap = capabilities.find(c => c.name === 'Shizuku (rish)');
+    const isShizukuInstalled = shizukuCap?.status === 'installed';
     const privItems: Array<{ id: string; label: string; available: boolean }> = [
       { id: 'priv-shell', label: 'Shell', available: priv.shell },
       { id: 'priv-shizuku', label: 'Shizuku', available: priv.shizuku },
@@ -122,12 +124,38 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
       { id: 'priv-adb', label: 'ADB', available: priv.adb },
     ];
     for (const p of privItems) {
-      items.push({
-        id: p.id,
-        severity: p.available ? 'ok' : 'warning',
-        category: 'Plataforma',
-        message: `${p.label}: ${p.available ? 'disponible' : 'no disponible'}`,
-      });
+      if (p.id === 'priv-shizuku') {
+        if (priv.shizuku) {
+          items.push({
+            id: 'priv-shizuku',
+            severity: 'ok',
+            category: 'Plataforma',
+            message: 'Shizuku: disponible',
+          });
+        } else if (isShizukuInstalled) {
+          items.push({
+            id: 'priv-shizuku',
+            severity: 'warning',
+            category: 'Plataforma',
+            message: 'Shizuku: instalado pero no activo',
+            explanation: 'El binario rish existe pero el servicio Shizuku no responde. Carga la skill shizuku-rikka para activar el servicio y luego ejecuta: buffy doctor',
+          });
+        } else {
+          items.push({
+            id: 'priv-shizuku',
+            severity: 'warning',
+            category: 'Plataforma',
+            message: 'Shizuku: no instalado',
+          });
+        }
+      } else {
+        items.push({
+          id: p.id,
+          severity: p.available ? 'ok' : 'warning',
+          category: 'Plataforma',
+          message: `${p.label}: ${p.available ? 'disponible' : 'no disponible'}`,
+        });
+      }
     }
   }
 
