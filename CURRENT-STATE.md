@@ -1,13 +1,13 @@
 # CURRENT-STATE — Buffy Next
 
-**Fecha:** 2026-09-11  
-**Rama:** master  
-**HEAD:** `a2a02a0`  
-**HEAD remoto:** `e4a9354` (por confirmar con push)  
-**Versión (package.json):** 0.2.2  
-**Tags presentes:** `v0.2.0-rc`, `v0.2.1`, `v0.2.2`  
-**Descripción Git:** `v0.2.2-8-ge4a9354`  
-**Commits locales por delante de origin:** 1 (`a2a02a0`)  
+**Fecha:** 2026-09-11
+**Rama:** master
+**HEAD:** `d542a6d`
+**HEAD remoto:** `d542a6d` (confirmado)
+**Versión (package.json):** 0.2.2
+**Tags presentes:** `v0.2.0-rc`, `v0.2.1`, `v0.2.2`
+**Descripción Git:** `v0.2.2-9-gd542a6d`
+**Commits locales por delante de origin:** 0
 
 ---
 
@@ -23,9 +23,9 @@ Their eventual migration to an explicitly superseded/deprecated status is a sepa
 
 ## 0. Shizuku priv-checkpoint — B→C VERIFICADO
 
-**Checkpoint:** 2026-09-11  
-**Estado:** B→C **VERIFICADO**  
-**Commit del patch:** `a2a02a0`  
+**Checkpoint:** 2026-09-11
+**Estado:** B→C **VERIFICADO**
+**Commit del patch:** `a2a02a0`
 
 ### Objetivo del checkpoint
 
@@ -44,18 +44,18 @@ Demostrar que `buffy doctor --json` distingue correctamente tres estados de Shiz
 - Rama `isShizukuInstalled === true` → `severity: "warning"`, `message: "Shizuku: instalado pero no activo"` con `explanation`
 - Rama default → `severity: "warning"`, `message: "Shizuku: no instalado"`
 
-#### `src/adapters/android.ts` (uncommitted, pendiente de commit)
+#### `src/adapters/android.ts` (commit `d542a6d`)
 - Línea 54: `shizuku = rishTest.includes('uid=') || rishTest.includes('gid=')`
 - **Causa raíz del bug:** `execSync` con `RISH_APPLICATION_ID=com.termux` devuelve `gid=2000(shell)` pero no `uid=` cuando `rish` se invoca desde el código compilado
 - El fallback `gid=` permite detectar correctamente la presencia de Shizuku
-- **B→C VERIFICADO:** `buffy doctor --json` muestra `priv-shizuku: {severity: "ok", message: "Shizuku: disponible"}` con `privileges.shizuku: true`
-- `rish -c "id"` con `RISH_APPLICATION_ID=com.termux` → `uid=2000(shell) gid=2000(shell)` → `includes('uid=') || includes('gid=')` → `true` ✅
+- **B→C VERIFICADO:** `buffy doctor --json` mostraba `priv-shizuku: {severity: "ok", message: "Shizuku: disponible"}` con `privileges.shizuku: true` al momento del checkpoint
+- `rish -c "id"` con `RISH_APPLICATION_ID=com.termux` → `uid=2000(shell) gid=2000(shell)` → `includes('uid=') || includes('gid=')` → `true` ✅ (en el momento del checkpoint)
 
-### Verificación dinámica
+### Verificación dinámica (en momento del checkpoint)
 
 - `buffy doctor --json` → `priv-shizuku: {severity: "ok", message: "Shizuku: disponible"}` ✅
 - `rish -c "id"` con `RISH_APPLICATION_ID=com.termux` → `uid=2000(shell) gid=2000(shell)` ✅
-- `detectPrivileges()` devuelve `shizuku: true` ✅
+- `detectPrivileges()` devolvía `shizuku: true` ✅
 
 ### Estado de persistencia / resiliencia (SIN VERIFICAR)
 
@@ -68,12 +68,6 @@ Demostrar que `buffy doctor --json` distingue correctamente tres estados de Shiz
 | Persistencia post-reboot | **SIN VERIFICAR** | No se ha probado tras reinicio |
 | Watchdog ejecutado | **NO** | No se ha ejecutado |
 
-### Siguiente acción
-
-**PRE-WATCHDOG ADB 5555 VERIFICATION**
-- Verificar conectividad ADB a `127.0.0.1:5555`
-- No ejecutar watchdog, no matar procesos, no hacer reboot, no cambiar Wireless Debugging
-
 ### Tests
 
 **Suite: 606/607** (1 fallo preexistente, no relacionado con Shizuku)
@@ -84,20 +78,88 @@ Demostrar que `buffy doctor --json` distingue correctamente tres estados de Shiz
 
 ---
 
-## 1. Identity
+## 1. PRE-WATCHDOG ADB 5555 VERIFICATION — experimento ejecutado
 
-| Campo                  | Valor                                      |
-|------------------------|--------------------------------------------|
-| Fecha de este estado   | 2026-09-10                                 |
-| Rama                   | master                                     |
-| HEAD exacto            | e4a9354cc00aff1139580ba667231991d940518e  |
-| Versión package.json   | 0.2.2                                      |
-| Tags                   | v0.2.0-rc, v0.2.1, v0.2.2                 |
-| Commits desde v0.2.2   | 8 (último: ExecutionEvidence wiring)       |
+**Checkpoint:** 2026-09-11
+**Estado:** EXPERIMENTO EJECUTADO — STOP aplicado por protocolo
+**Commit:** `d542a6d`
+**Estado experimental previo:** C confirmado (Shizuku disponible en checkpoint B→C)
+
+### Objetivo
+
+Determinar si el transporte ADB `127.0.0.1:5555` está actualmente disponible y permite operar sobre el dispositivo. Sin modificar nada.
+
+### Comprobaciones ejecutadas (en orden)
+
+1. `adb devices` → Lista de dispositivos vacía
+2. `adb -s 127.0.0.1:5555 devices` → Lista de dispositivos vacía
+3. `adb -s 127.0.0.1:5555 shell id` → `adb: device '127.0.0.1:5555' not found`
+4. `adb -s 127.0.0.1:5555 shell pidof shizuku_server` → `adb: device '127.0.0.1:5555' not found`
+5. `RISH_APPLICATION_ID=com.termux MANAGER_APPLICATION_ID=moe.shizuku.privileged.api ~/bin/rish -c "id"` → `Server is not running` (exit 1)
+6. `buffy doctor --json` → `priv-shizuku: {severity: "warning", message: "Shizuku: instalado pero no activo", explanation: "El binario rish existe pero el servicio Shizuku no responde..."}`
+
+### Evidencia nueva
+
+- En el checkpoint B→C, Shizuku estaba **disponible** (`priv.shizuku: true`, `severity: "ok"`)
+- Al ejecutar la fase PRE-WATCHDOG, Shizuku **ya no está disponible** (`priv.shizuku: false`, `severity: "warning"`, `message: "instalado pero no activo"`)
+- `rish` responde `Server is not running`
+- El transporte ADB `127.0.0.1:5555` no está disponible
+
+### Reglas de cierre aplicadas
+
+**Regla 1 aplicada:** `127.0.0.1:5555` **NO está conectado** → STOP inmediato.
+- No se intentó recuperación
+- No se ejecutó watchdog
+- No se hizo reboot
+- No se cambió Wireless Debugging
+- No se ejecutó `adb tcpip 5555`
+- No se hicieron modificaciones de archivos/repositorio
+
+### Hipótesis (SIN DEMOSTRAR)
+
+Esto NO demuestra por qué cayó Shizuku.
+
+SÍ demuestra que:
+- El watchdog no puede operar sin el transporte `5555`
+- `127.0.0.1:5555` no está disponible actualmente
+- La pérdida de Shizuku es observable desde `rish` y `buffy doctor`
+- La hipótesis de que el watchdog pueda proporcionar recuperación automática **queda sin probar**
+- **No se debe afirmar** que "Wireless Debugging se cayó" — el experimento no comprobó directamente ese estado
+
+### Estado experimental actual
+
+| Campo | Valor |
+|-------|-------|
+| Estado C (checkpoint B→C) | Confirmado — Shizuku disponible |
+| PRE-WATCHDOG ejecutado | ✅ Sí |
+| ADB 5555 disponible | ❌ No |
+| Shizuku actualmente | Caído |
+| rish funcionando | ❌ `Server is not running` |
+| Buffy doctor | `instalado pero no activo` |
+| Watchdog ejecutado | ❌ No |
+| Recuperación aplicada | ❌ Ninguna |
+| Estado de Wireless Debugging | **NO VERIFICADO** — no comprobado directamente |
+
+### Siguiente acción
+
+**NINGUNA** — congelar este estado experimental antes de tocar el dispositivo. Decidir intervención manual mínima para recuperar `5555`/Wireless Debugging **después** de commit + push verificados.
 
 ---
 
-## 2. What Buffy Next is now
+## 2. Identity
+
+| Campo                  | Valor                                      |
+|------------------------|--------------------------------------------|
+| Fecha de este estado   | 2026-09-11                                 |
+| Rama                   | master                                     |
+| HEAD exacto            | d542a6df8cbc8d6e02e82d4f203adb5344662f6c   |
+| Versión package.json   | 0.2.2                                      |
+| Tags                   | v0.2.0-rc, v0.2.1, v0.2.2                 |
+| Commits desde v0.2.2   | 9 (último: fix Shizuku detectPrivileges)  |
+
+---
+
+## 3. What Buffy Next is now
 
 Buffy Next es un motor de operaciones de sistema con las siguientes capacidades reales y presentes en el código:
 
@@ -119,7 +181,7 @@ La integración con agentes externos ocurre vía CLI o vía adapter MCP externo 
 
 ---
 
-## 3. Effective capability
+## 4. Effective capability
 
 ### Acciones ejecutables catalogadas (canónicas)
 
@@ -169,7 +231,7 @@ Buffy puede observar el sistema, diagnosticar, ejecutar las 9 acciones catalogad
 
 ---
 
-## 4. Known debt
+## 5. Known debt
 
 | Elemento | Clasificación | Notas |
 |----------|---------------|-------|
@@ -181,7 +243,7 @@ Ninguna de estas deudas se convierte automáticamente en tarea.
 
 ---
 
-## 5. Explicit non-goals (alcance actual)
+## 6. Explicit non-goals (alcance actual)
 
 Fuera del alcance operativo actual (decisión vigente, no prohibición permanente):
 
@@ -193,7 +255,7 @@ Fuera del alcance operativo actual (decisión vigente, no prohibición permanent
 
 ---
 
-## 6. Current open decision
+## 7. Current open decision
 
 Ninguna.
 
@@ -207,8 +269,9 @@ Se reabrirá solo si aparece simultáneamente:
 
 ---
 
-## 7. Operational baseline
+## 8. Operational baseline
 
-- HEAD con ExecutionEvidence wiring (`e4a9354`) constituye el baseline actual.
+- HEAD con `d542a6d` (fix Shizuku detectPrivileges `uid || gid`) constituye el baseline operativo actual.
+- El checkpoint B→C (Sección 0) y el experimento PRE-WATCHDOG (Sección 1) forman parte del estado operativo documentado.
 - Cualquier cambio arquitectónico o de capacidad debe partir de este documento y de la evidencia del código en este HEAD.
 - La complejidad debe seguir siendo proporcional a la tarea real.
