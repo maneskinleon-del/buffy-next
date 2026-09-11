@@ -1,11 +1,13 @@
 # CURRENT-STATE — Buffy Next
 
-**Fecha:** 2026-09-10  
+**Fecha:** 2026-09-11  
 **Rama:** master  
-**HEAD:** `e4a9354cc00aff1139580ba667231991d940518e`  
+**HEAD:** `a2a02a0`  
+**HEAD remoto:** `e4a9354` (por confirmar con push)  
 **Versión (package.json):** 0.2.2  
 **Tags presentes:** `v0.2.0-rc`, `v0.2.1`, `v0.2.2`  
-**Descripción Git:** `v0.2.2-8-ge4a9354`
+**Descripción Git:** `v0.2.2-8-ge4a9354`  
+**Commits locales por delante de origin:** 1 (`a2a02a0`)  
 
 ---
 
@@ -16,6 +18,69 @@
 `CONTINUE.md`, `docs/PROJECT-STATUS.md`, and `docs/ARCHITECTURE-FROZEN.md` are retained historical/architectural documents. They are not authoritative for current operational state when they conflict with this file.
 
 Their eventual migration to an explicitly superseded/deprecated status is a separate operator-approved action.
+
+---
+
+## 0. Shizuku priv-checkpoint — B→C VERIFICADO
+
+**Checkpoint:** 2026-09-11  
+**Estado:** B→C **VERIFICADO**  
+**Commit del patch:** `a2a02a0`  
+
+### Objetivo del checkpoint
+
+Demostrar que `buffy doctor --json` distingue correctamente tres estados de Shizuku:
+1. **no instalado** — `priv.shizuku === false`, `capabilities` no incluye `Shizuku (rish)` con `status === 'installed'`
+2. **instalado pero no activo** — `priv.shizuku === false`, `capabilities` incluye `Shizuku (rish)` con `status === 'installed'`
+3. **disponible** — `priv.shizuku === true`, `severity: "ok"`, `message: "Shizuku: disponible"`
+
+### Implementación
+
+#### `src/core/doctor.ts` (commit `a2a02a0`)
+- Líneas 118-150: Lógica de tres estados para `priv-shizuku`
+- `shizukuCap = capabilities.find(c => c.name === 'Shizuku (rish)')` calculada UNA sola vez antes del loop de privilegios
+- `isShizukuInstalled = shizukuCap?.status === 'installed'`
+- Rama `priv.shizuku === true` → `severity: "ok"`, `message: "Shizuku: disponible"`
+- Rama `isShizukuInstalled === true` → `severity: "warning"`, `message: "Shizuku: instalado pero no activo"` con `explanation`
+- Rama default → `severity: "warning"`, `message: "Shizuku: no instalado"`
+
+#### `src/adapters/android.ts` (uncommitted, pendiente de commit)
+- Línea 54: `shizuku = rishTest.includes('uid=') || rishTest.includes('gid=')`
+- **Causa raíz del bug:** `execSync` con `RISH_APPLICATION_ID=com.termux` devuelve `gid=2000(shell)` pero no `uid=` cuando `rish` se invoca desde el código compilado
+- El fallback `gid=` permite detectar correctamente la presencia de Shizuku
+- **B→C VERIFICADO:** `buffy doctor --json` muestra `priv-shizuku: {severity: "ok", message: "Shizuku: disponible"}` con `privileges.shizuku: true`
+- `rish -c "id"` con `RISH_APPLICATION_ID=com.termux` → `uid=2000(shell) gid=2000(shell)` → `includes('uid=') || includes('gid=')` → `true` ✅
+
+### Verificación dinámica
+
+- `buffy doctor --json` → `priv-shizuku: {severity: "ok", message: "Shizuku: disponible"}` ✅
+- `rish -c "id"` con `RISH_APPLICATION_ID=com.termux` → `uid=2000(shell) gid=2000(shell)` ✅
+- `detectPrivileges()` devuelve `shizuku: true` ✅
+
+### Estado de persistencia / resiliencia (SIN VERIFICAR)
+
+| Elemento | Estado | Nota |
+|----------|--------|------|
+| `bin/shizuku-watchdog.sh` | Existe | Usa `adb -s 127.0.0.1:5555` |
+| `adb -s 127.0.0.1:5555 devices` | **NO CONECTADO** | Wireless Debugging no habilitado |
+| `start.sh` en `/sdcard/Android/data/moe.shizuku.privileged.api/start.sh` | **NO EXISTE** | Método 3 de skill no disponible |
+| `cmd -l | grep -i shizuku` | **SIN SERVICIO** | `shizuku_server` no es servicio `cmd` |
+| Persistencia post-reboot | **SIN VERIFICAR** | No se ha probado tras reinicio |
+| Watchdog ejecutado | **NO** | No se ha ejecutado |
+
+### Siguiente acción
+
+**PRE-WATCHDOG ADB 5555 VERIFICATION**
+- Verificar conectividad ADB a `127.0.0.1:5555`
+- No ejecutar watchdog, no matar procesos, no hacer reboot, no cambiar Wireless Debugging
+
+### Tests
+
+**Suite: 606/607** (1 fallo preexistente, no relacionado con Shizuku)
+- Fallo único: `tests/buffy-tool.test.ts > Buffy Tool — JSON determinism > should produce identical JSON for same input`
+- Causa: `latencyMs: 0` vs `latencyMs: 1` — diferencia de timing no determinista
+- **Preexistente y no relacionado con Shizuku**
+- No se modifica el test para hacerlo pasar
 
 ---
 

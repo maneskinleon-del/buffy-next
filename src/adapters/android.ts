@@ -51,7 +51,7 @@ export class AndroidTermuxAdapter implements PlatformAdapter {
     if (rishPath) {
       const rishEnv = { RISH_APPLICATION_ID: process.env.RISH_APPLICATION_ID ?? 'com.termux' };
       const rishTest = sh('rish -c "id" 2>/dev/null', rishEnv);
-      shizuku = rishTest.includes('uid=');
+      shizuku = rishTest.includes('uid=') || rishTest.includes('gid=');
     }
 
     // Root: check su binary and actual root access
