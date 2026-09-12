@@ -88,9 +88,14 @@ npm test           → 575/575 PASS
 npm run build      → PASS (dist/cli.js)
 ```
 
-(El test `buffy-tool.test.ts:175` "JSON determinism" es flaky preexistente en
-v0.2.2 por comparar `audit.latencyMs` — issue de mantenimiento futuro ya
-registrado; no relacionado con este cambio.)
+RESUELTO (2026-09-12): el test `buffy-tool.test.ts` "JSON determinism" era
+flaky preexistente en v0.2.2 por comparar `audit.latencyMs` — una medición
+wall-clock de instrumentación de monitoreo, no parte del payload semántico.
+Corregido en commit `094a3af`: la aserción excluye únicamente
+`audit.latencyMs` de la igualdad (que sigue verificándose como number ≥ 0)
+y mantiene la comparación byte a byte sobre todo el resto del objeto.
+Validación: test aislado 10/10 PASS, suite 607/607 PASS, `tsc --noEmit`
+0 errores. Publicado en origin/master como `0b8286e`.
 
 ## Git
 
