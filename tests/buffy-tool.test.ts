@@ -171,7 +171,18 @@ describe('Buffy Tool — JSON determinism', () => {
     const r1 = await diagnose(adapter, 'hola');
     const r2 = await diagnose(adapter, 'hola');
 
+    // audit.latencyMs is a wall-clock measurement (diagnose.ts: Date.now() - startTime)
+    // documented as "production monitoring" instrumentation (AuditTrail), not part of
+    // the deterministic semantic payload. Excluded from byte equality; its presence,
+    // type and range are asserted separately below.
+    const withoutLatency = (r: Awaited<ReturnType<typeof diagnose>>) => {
+      const { latencyMs, ...audit } = r.audit!;
+      expect(typeof latencyMs).toBe('number');
+      expect(latencyMs).toBeGreaterThanOrEqual(0);
+      return JSON.stringify({ ...r, audit });
+    };
+
     // Non-diagnostic: deterministic
-    expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
+    expect(withoutLatency(r1)).toBe(withoutLatency(r2));
   });
 });
