@@ -9,8 +9,11 @@ import { buildContext } from './core/context.js';
 import { BUFFY_VERSION } from './core/version.js';
 
 // ─── Instructions (injected during initialize) ───────────────
+// Exported as BUFFY_MCP_INSTRUCTIONS so the installer can prewrite the
+// AGY surface cache (`~/.gemini/antigravity-cli/mcp/buffy/instructions.md`)
+// with the same content, eliminating the connection-timing race.
 
-const INSTRUCTIONS = `Buffy is split into two independent projects. Buffy Context is long-term
+export const BUFFY_MCP_INSTRUCTIONS = `Buffy is split into two independent projects. Buffy Context is long-term
 memory/knowledge and is not exposed here. This server is Buffy Next: an
 environment specialist that observes the live system, diagnoses problems,
 and executes only pre-authorized actions elsewhere.
@@ -32,16 +35,19 @@ Call \`buffy_context\` first, before assuming or guessing the current state
 of the system.`;
 
 // ─── Tool schema ─────────────────────────────────────────────
+// Exported as BUFFY_CONTEXT_TOOL so the installer can prewrite the AGY
+// surface cache (`~/.gemini/antigravity-cli/mcp/buffy/buffy_context.json`).
 
-const BUFFY_CONTEXT_TOOL = {
+export const BUFFY_CONTEXT_TOOL = {
   name: 'buffy_context',
   description:
     'Returns the current system state: platform, hardware (CPU/RAM/GPU/storage/temperature), ' +
     'available tools, privileges, running processes. Every field carries freshness metadata ' +
     '(observedAt, ageMs, freshness). Call this BEFORE assuming the current state of the environment.',
   inputSchema: {
-    type: 'object' as const,
+    // properties-first so AGY's cached `parameters` matches the prewritten surface.
     properties: {},
+    type: 'object' as const,
   },
   annotations: {
     readOnlyHint: true,
@@ -69,7 +75,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
         protocolVersion: '2024-11-05',
         capabilities: { tools: {} },
         serverInfo: { name: 'buffy-next', version: BUFFY_VERSION },
-        instructions: INSTRUCTIONS,
+        instructions: BUFFY_MCP_INSTRUCTIONS,
       },
     };
   }

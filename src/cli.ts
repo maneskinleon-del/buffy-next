@@ -343,6 +343,7 @@ async function cmdInstall(subArgs: string[]) {
   const report = installAntigravity();
   console.log(`MCP config:   ${report.mcpEntry} → ${report.mcpConfigPath}`);
   console.log(`Instructions: ${report.instructionsEntry} → ${report.instructionsPath}`);
+  console.log(`AGY surface:  → ${report.surfaceDir}`);
 }
 
 function showHelp() {
@@ -364,7 +365,7 @@ Uso:
   buffy metrics                  Métricas agregadas
   buffy serve --mcp              Iniciar servidor MCP (stdio)
   buffy install --target antigravity
-                                 Inyectar MCP + GEMINI.md para Antigravity
+                                 Inyectar MCP + GEMINI.md + superficie AGY
   --json                         Salida en formato JSON
   --pilot                        Activar modo piloto (telemetry)
   --help                         Esta ayuda

@@ -83,4 +83,46 @@ describe('installAntigravity', () => {
     expect(md).not.toContain('Buffy is split into two independent projects');
     expect(md).not.toContain('querying it never authorizes one');
   });
+
+  it('pre-writes the AGY surface cache dir (drives <mcp_servers> exposure)', () => {
+    const geminiHome = mkdtempSync(join(tmpdir(), 'buffy-install-'));
+    const rep = installAntigravity({ geminiHome });
+
+    expect(rep.surfaceDir).toBe(join(geminiHome, 'antigravity-cli', 'mcp', 'buffy'));
+    expect(existsSync(join(rep.surfaceDir, 'buffy_context.json'))).toBe(true);
+    expect(existsSync(join(rep.surfaceDir, 'instructions.md'))).toBe(true);
+  });
+
+  it('writes buffy_context.json in AGY surface format (name/description/parameters)', () => {
+    const geminiHome = mkdtempSync(join(tmpdir(), 'buffy-install-'));
+    const rep = installAntigravity({ geminiHome });
+
+    const tool = JSON.parse(readFileSync(join(rep.surfaceDir, 'buffy_context.json'), 'utf-8'));
+    expect(tool.name).toBe('buffy_context');
+    expect(tool.inputSchema).toBeUndefined();
+    expect(tool.annotations).toBeUndefined();
+    expect(tool.parameters).toEqual({ type: 'object', properties: {} });
+    expect(tool.description).toContain('Returns the current system state');
+  });
+
+  it('writes instructions.md matching the MCP initialize instructions', () => {
+    const geminiHome = mkdtempSync(join(tmpdir(), 'buffy-install-'));
+    const rep = installAntigravity({ geminiHome });
+
+    const md = readFileSync(join(rep.surfaceDir, 'instructions.md'), 'utf-8');
+    expect(md).toContain('Buffy is split into two independent projects');
+    expect(md).toContain('Call `buffy_context` before assuming');
+  });
+
+  it('keeps the surface cache idempotent across re-runs', () => {
+    const geminiHome = mkdtempSync(join(tmpdir(), 'buffy-install-'));
+    installAntigravity({ geminiHome });
+    const second = installAntigravity({ geminiHome });
+
+    const tool = JSON.parse(readFileSync(join(second.surfaceDir, 'buffy_context.json'), 'utf-8'));
+    expect(tool.name).toBe('buffy_context');
+    expect(tool.parameters).toEqual({ type: 'object', properties: {} });
+    const md = readFileSync(join(second.surfaceDir, 'instructions.md'), 'utf-8');
+    expect(md).toContain('Buffy is split into two independent projects');
+  });
 });

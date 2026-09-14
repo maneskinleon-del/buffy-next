@@ -2,11 +2,13 @@
 // Mechanism faithfully mirrors CodeGraph v1.5.0 `codegraph install`:
 //   1. MCP registration → ~/.gemini/config/mcp_config.json (AGY format: no `type`)
 //   2. Instructions block (marker-fenced) → ~/.gemini/GEMINI.md (upsert)
+//   3. AGY MCP surface cache → ~/.gemini/antigravity-cli/mcp/buffy/ (pre-write)
 
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { BUFFY_CONTEXT_TOOL, BUFFY_MCP_INSTRUCTIONS } from '../mcp.js';
 import { BUFFY_INSTRUCTIONS_BLOCK, BUFFY_SECTION_END, BUFFY_SECTION_START } from './instructions.js';
 
 export interface AntigravityInstallOptions {
@@ -19,6 +21,8 @@ export interface InstallReport {
   mcpEntry: 'created' | 'updated';
   instructionsPath: string;
   instructionsEntry: 'created' | 'updated';
+  /** AGY MCP surface cache dir (drives the `<mcp_servers>` injection). */
+  surfaceDir: string;
 }
 
 function mcpConfigPath(geminiHome: string): string {
@@ -87,10 +91,27 @@ export function installAntigravity(options: AntigravityInstallOptions = {}): Ins
   const hadBlock = content.includes(BUFFY_SECTION_START);
   writeFileSync(instructionsPath, upsertSection(content, BUFFY_INSTRUCTIONS_BLOCK));
 
+  // 3) AGY MCP surface cache — pre-write the dir the `<mcp_servers>` injection
+  // is built from, so Buffy is exposed even before AGY's first (slow) connect.
+  // Surface format mirrors AGY's `tools/list` cache: {name, description, parameters}.
+  const surfaceDir = join(geminiHome, 'antigravity-cli', 'mcp', 'buffy');
+  mkdirSync(surfaceDir, { recursive: true });
+  writeFileSync(
+    join(surfaceDir, 'buffy_context.json'),
+    JSON.stringify({
+      name: BUFFY_CONTEXT_TOOL.name,
+      description: BUFFY_CONTEXT_TOOL.description,
+      // AGY serializes the MCP inputSchema under `parameters` (key order preserved).
+      parameters: BUFFY_CONTEXT_TOOL.inputSchema,
+    }),
+  );
+  writeFileSync(join(surfaceDir, 'instructions.md'), BUFFY_MCP_INSTRUCTIONS);
+
   return {
     mcpConfigPath: mcpPath,
     mcpEntry: hadMcpEntry ? 'updated' : 'created',
     instructionsPath,
     instructionsEntry: hadBlock ? 'updated' : 'created',
+    surfaceDir,
   };
 }
