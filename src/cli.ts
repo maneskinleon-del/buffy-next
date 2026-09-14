@@ -9,6 +9,7 @@ import { buildContext } from './core/context.js';
 import { findActionById } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
 import { BUFFY_VERSION } from './core/version.js';
+import { startMcpServer } from './mcp.js';
 import {
   renderGreeting,
   renderDoctorReport,
@@ -74,6 +75,9 @@ async function main() {
         break;
       case 'metrics':
         await cmdMetrics();
+        break;
+      case 'serve':
+        await cmdServe(args.slice(1));
         break;
       case '--help':
       case '-h':
@@ -311,6 +315,17 @@ async function cmdMetrics() {
   }
 }
 
+async function cmdServe(subArgs: string[]) {
+  if (subArgs.includes('--mcp')) {
+    // MCP mode: start stdio JSON-RPC server (non-interactive)
+    startMcpServer();
+    return;
+  }
+  console.error('Uso: buffy serve --mcp');
+  console.error('Inicia el servidor MCP en modo stdio.');
+  process.exit(1);
+}
+
 function showHelp() {
   console.log(`
 Buffy Next — Motor de operaciones con interfaz de asistente
@@ -328,6 +343,7 @@ Uso:
   buffy setup                    Bootstrap de Buffy
   buffy health                   Estado de salud del sistema
   buffy metrics                  Métricas agregadas
+  buffy serve --mcp              Iniciar servidor MCP (stdio)
   --json                         Salida en formato JSON
   --pilot                        Activar modo piloto (telemetry)
   --help                         Esta ayuda
