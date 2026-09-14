@@ -58,6 +58,7 @@
 | C1 | checkout `buffy-next` | sí | PASS |
 | C2 | vacío `/tmp/…/buffy-routing-test` | no | FAIL |
 | C3 | poblado `/tmp/buffy-routing-unrelated` | sí | PASS |
+| C4 | `independent-routing-test` + HOME limpio | sí (denied request-review) | PASS exposición + routing |
 
 ---
 
