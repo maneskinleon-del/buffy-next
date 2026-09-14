@@ -16,7 +16,7 @@ describe('installAntigravity', () => {
     expect(cfg.mcpServers.buffy).toEqual({ command: 'buffy', args: ['serve', '--mcp'] });
     expect(cfg.mcpServers.buffy.type).toBeUndefined();
     expect(rep.mcpEntry).toBe('created');
-    expect(rep.mcpConfigPath).toContain('antigravity/mcp_config.json');
+    expect(rep.mcpConfigPath).toContain('config/mcp_config.json');
   });
 
   it('preserves existing MCP entries (merge, not overwrite)', () => {

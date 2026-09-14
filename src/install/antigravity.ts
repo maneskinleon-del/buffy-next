@@ -26,14 +26,9 @@ export interface InstallReport {
 }
 
 function mcpConfigPath(geminiHome: string): string {
-  // Unified (post-migration) vs legacy (pre-migration), matching CodeGraph:
-  // the `.migrated` marker signals the unified path; otherwise fall back to
-  // unified if it already exists, else the legacy Antigravity path.
-  const unified = join(geminiHome, 'config', 'mcp_config.json');
-  const marker = join(geminiHome, 'config', '.migrated');
-  if (existsSync(marker)) return unified;
-  if (existsSync(unified)) return unified;
-  return join(geminiHome, 'antigravity', 'mcp_config.json');
+  // AGY 1.1.19 reads from the unified path ~/.gemini/config/mcp_config.json.
+  // Always write there; the legacy antigravity path is no longer used.
+  return join(geminiHome, 'config', 'mcp_config.json');
 }
 
 /** Bare `buffy` on Linux (GUI apps inherit user PATH); absolute on macOS. */
