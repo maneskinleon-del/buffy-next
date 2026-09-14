@@ -10,6 +10,7 @@ import { findActionById } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
 import { BUFFY_VERSION } from './core/version.js';
 import { startMcpServer } from './mcp.js';
+import { installAntigravity } from './install/antigravity.js';
 import {
   renderGreeting,
   renderDoctorReport,
@@ -78,6 +79,9 @@ async function main() {
         break;
       case 'serve':
         await cmdServe(args.slice(1));
+        break;
+      case 'install':
+        await cmdInstall(args.slice(1));
         break;
       case '--help':
       case '-h':
@@ -326,6 +330,21 @@ async function cmdServe(subArgs: string[]) {
   process.exit(1);
 }
 
+async function cmdInstall(subArgs: string[]) {
+  const target = subArgs.includes('--target')
+    ? subArgs[subArgs.indexOf('--target') + 1]
+    : subArgs.find((a) => a.startsWith('--target='))?.split('=')[1];
+
+  if (target !== 'antigravity') {
+    console.error('Uso: buffy install --target antigravity');
+    process.exit(1);
+  }
+
+  const report = installAntigravity();
+  console.log(`MCP config:   ${report.mcpEntry} → ${report.mcpConfigPath}`);
+  console.log(`Instructions: ${report.instructionsEntry} → ${report.instructionsPath}`);
+}
+
 function showHelp() {
   console.log(`
 Buffy Next — Motor de operaciones con interfaz de asistente
@@ -344,6 +363,8 @@ Uso:
   buffy health                   Estado de salud del sistema
   buffy metrics                  Métricas agregadas
   buffy serve --mcp              Iniciar servidor MCP (stdio)
+  buffy install --target antigravity
+                                 Inyectar MCP + GEMINI.md para Antigravity
   --json                         Salida en formato JSON
   --pilot                        Activar modo piloto (telemetry)
   --help                         Esta ayuda
