@@ -85,7 +85,7 @@ integración específica del agente
 
 - Claude Code
 - Codex CLI
-- Gemini CLI / AGY
+- Gemini CLI / AGY (mecanismo de skill discovery de AGY: NO VERIFICADO — ver `docs/research/AGY-SKILL-DISCOVERY-AUDIT-2026-09-15.md`)
 - OpenCode
 - Cursor
 - otros que posteriormente se investiguen
