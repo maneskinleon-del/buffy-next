@@ -59,6 +59,7 @@
 | C2 | vacío `/tmp/…/buffy-routing-test` | no | FAIL |
 | C3 | poblado `/tmp/buffy-routing-unrelated` | sí | PASS |
 | C4 | `independent-routing-test` + HOME limpio | sí (denied request-review) | PASS exposición + routing |
+| C3′ | `/tmp/buffy-routing-unrelated-2` — **vacío en runtime** (verificado: `ls -A` del propio transcript → stdout vacío) | no (modelo reporta solo codegraph) | **no es réplica de C3; replica C2** → ver `AGY-BUFFY-ROUTING-C3-PRIME-ANALYSIS-2026-09-15.md` |
 
 ---
 
