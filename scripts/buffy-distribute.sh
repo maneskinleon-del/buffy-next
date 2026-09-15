@@ -91,6 +91,37 @@ if [ -n "$CONTEXT_REPO" ]; then
   CONTEXT_STATUS=found
 fi
 
+# ─── Entrypoints de Buffy Context (nunca se inventan) ─────────
+
+CONTEXT_LOAD="NO DISPONIBLE (no verificado en este entorno)"
+CONTEXT_SCRIPTS="NO DISPONIBLE (no verificado en este entorno)"
+
+if [ "$CONTEXT_STATUS" = found ]; then
+  if [ -f "$CONTEXT_REPO/ai-context/LOAD_CONTEXT.md" ]; then
+    CONTEXT_LOAD="$(display_path "$CONTEXT_REPO/ai-context/LOAD_CONTEXT.md")"
+  fi
+
+  CONTEXT_SCRIPTS=""
+  for s in buffy-agent.sh buffy-memory.sh buffy-router.sh buffy-doctor.sh; do
+    if [ -f "$CONTEXT_REPO/scripts/$s" ]; then
+      if [ -n "$CONTEXT_SCRIPTS" ]; then CONTEXT_SCRIPTS="$CONTEXT_SCRIPTS, "; fi
+      CONTEXT_SCRIPTS="$CONTEXT_SCRIPTS$(display_path "$CONTEXT_REPO/scripts/$s")"
+    fi
+  done
+  if [ -z "$CONTEXT_SCRIPTS" ]; then
+    CONTEXT_SCRIPTS="NO DISPONIBLE (no verificado en este entorno)"
+  fi
+fi
+
+# ─── Entrypoint CLI de Buffy Next (solo si existe el bundle) ──
+
+NEXT_CLI="$NEXT_ROOT/dist/cli.js"
+if [ -f "$NEXT_CLI" ]; then
+  NEXT_CLI="$(display_path "$NEXT_CLI")"
+else
+  NEXT_CLI="NO DISPONIBLE (no compilado — requiere npm run build)"
+fi
+
 # ─── Estado de los archivos referenciados ─────────────────────
 
 NEXT_STATUS=found
@@ -193,6 +224,7 @@ else
 fi
 
 export T_NEXT T_CONTEXT T_COMPACT T_CONTRACT T_DISCOVERY T_DISTRIBUTE T_SESSIONSTART T_CONTEXT_RULE
+export CONTEXT_LOAD CONTEXT_SCRIPTS NEXT_CLI
 
 mkdir -p "$CONTEXT_WORKSPACE"
 
@@ -205,6 +237,9 @@ awk '{
   gsub(/__DISTRIBUTE__/,  ENVIRON["T_DISTRIBUTE"]);
   gsub(/__SESSIONSTART__/,ENVIRON["T_SESSIONSTART"]);
   gsub(/__CONTEXT_RULE__/,ENVIRON["T_CONTEXT_RULE"]);
+  gsub(/__CONTEXT_LOAD__/,ENVIRON["CONTEXT_LOAD"]);
+  gsub(/__CONTEXT_SCRIPTS__/,ENVIRON["CONTEXT_SCRIPTS"]);
+  gsub(/__NEXT_CLI__/,    ENVIRON["NEXT_CLI"]);
   print
 }' "$TEMPLATE" > "$README_FILE.tmp" && mv "$README_FILE.tmp" "$README_FILE"
 

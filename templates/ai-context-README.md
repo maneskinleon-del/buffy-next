@@ -8,21 +8,29 @@ Artefactos derivados:
     manifest: ~/.buffy/layout.json
     índice:   ~/ai-context/README.md
 
-## Descubrimiento de Buffy
+## Capacidades
 
-Buffy se distribuye como una unidad compuesta de dos repositorios
-independientes: Next (entorno vivo) y Context (memoria, opcional).
-Este índice proporciona ubicaciones verificadas para los archivos
-canónicos que el agente necesita para descubrir y consumir Buffy.
+Buffy se compone de dos capacidades complementarias e independientes
+(ninguna depende de la otra):
 
-Repositorio fuente (Buffy Next):
-    __NEXT__
+**Buffy Context — memoria / conocimiento / contexto:**
+    repo:            __CONTEXT__
+    protocolo:       __CONTEXT_LOAD__
+    scripts:         __CONTEXT_SCRIPTS__
 
-Buffy Context:
-    __CONTEXT__
+**Buffy Next — entorno vivo / diagnóstico / operaciones:**
+    repo:            __NEXT__
+    entrypoint CLI:  __NEXT_CLI__
+    contrato:        __COMPACT__
 
-Contrato compacto — leer primero:
-    __COMPACT__
+Son complementarias, no dependientes: Buffy Context aporta memoria
+persistente y conocimiento de sesión; Buffy Next aporta observación del
+estado vivo y operación del sistema.
+
+## Índice de descubrimiento
+
+Rutas canónicas verificadas (el README de Buffy Next es la fuente del
+contrato; este índice solo localiza):
 
 Contrato completo:
     __CONTRACT__

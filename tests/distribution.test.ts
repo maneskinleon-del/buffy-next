@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -238,5 +238,72 @@ describe('buffy-distribute', () => {
     const out = runBootstrap(home);
     expect(out).toContain('buffy-distribute: manifest ->');
     expect(out).toContain('buffy-distribute: readme   ->');
+  });
+
+  // ─── T5 — Buffy Context encontrado: entrypoints reales en README ──
+
+  function makeContextFixture(home: string): string {
+    const ctx = join(home, 'buffy-context');
+    mkdirSync(join(ctx, 'scripts'), { recursive: true });
+    mkdirSync(join(ctx, 'ai-context'), { recursive: true });
+    for (const s of ['buffy-agent.sh', 'buffy-memory.sh', 'buffy-router.sh', 'buffy-doctor.sh']) {
+      writeFileSync(join(ctx, 'scripts', s), '#!/usr/bin/env bash\n');
+    }
+    writeFileSync(join(ctx, 'ai-context', 'LOAD_CONTEXT.md'), '# protocolo\n');
+    return ctx;
+  }
+
+  function runBootstrapFound(home: string, ctx: string): string {
+    return execFileSync('bash', [script], {
+      env: { ...process.env, HOME: home, BUFFY_CONTEXT_HOME: ctx },
+      encoding: 'utf-8',
+    });
+  }
+
+  it('T5: buffy-context found when BUFFY_CONTEXT_HOME set', () => {
+    const home = makeHome();
+    const ctx = makeContextFixture(home);
+    runBootstrapFound(home, ctx);
+
+    const layout = readJson(home);
+    expect(layout.entries['buffy-context'].status).toBe('found');
+    expect(layout.entries['buffy-context'].path).toBe(ctx);
+  });
+
+  it('T5: README lists verified Buffy Context entrypoints when found', () => {
+    const home = makeHome();
+    const ctx = makeContextFixture(home);
+    runBootstrapFound(home, ctx);
+
+    const readme = readReadme(home);
+    for (const p of [
+      join(ctx, 'ai-context', 'LOAD_CONTEXT.md'),
+      join(ctx, 'scripts', 'buffy-agent.sh'),
+      join(ctx, 'scripts', 'buffy-memory.sh'),
+      join(ctx, 'scripts', 'buffy-router.sh'),
+      join(ctx, 'scripts', 'buffy-doctor.sh'),
+    ]) {
+      // README renders paths under $HOME in tilde form (display_path).
+      const tilde = p.startsWith(home) ? `~${p.slice(home.length)}` : p;
+      expect(readme).toContain(tilde);
+    }
+  });
+
+  it('T5: README states roles + complementarity, and all refs verify', () => {
+    const home = makeHome();
+    const ctx = makeContextFixture(home);
+    runBootstrapFound(home, ctx);
+
+    const readme = readReadme(home);
+    expect(readme).toMatch(/Capacidades/);
+    expect(readme).toMatch(/complementarias/);
+    expect(readme).toMatch(/memoria/);
+    expect(readme).toMatch(/entorno vivo/);
+
+    const refs = parseRefs(readme);
+    for (const ref of refs) {
+      const abs = resolveRef(ref, home);
+      expect(existsSync(abs), `reference ${ref} resolves to ${abs}`).toBe(true);
+    }
   });
 });
