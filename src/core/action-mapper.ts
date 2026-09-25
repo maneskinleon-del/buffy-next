@@ -112,16 +112,21 @@ export function mapActions(
       .map(c => c.message)
       .join('; ') || 'Diagnóstico del sistema';
 
-    const inferred = relevantChecks
-      .map(c => c.suggestion || c.explanation || c.message)
-      .join('; ') || 'Posible problema detectado';
+    // inferred NO se emite cuando no hay inferencia real.
+    // NO reemplazar por fallback suggestion||explanation||message —
+    // eso copia Observed como Inferred (bug H5, 2026-09-25).
+    // Contrato: RecommendedAction.inferred?: string — su AUSENCIA es la señal
+    // "no hay inferencia". Inferencia real queda como feature futura.
+    const inferredParts = relevantChecks
+      .map(c => c.suggestion || c.explanation || '')
+      .filter(part => part !== '');
 
     const confidence = evaluateConfidence(checkResults, action.id, instructions);
 
     return {
       id: action.id,
       observed,
-      inferred,
+      ...(inferredParts.length > 0 ? { inferred: inferredParts.join('; ') } : {}),
       recommended: action.name,
       instructions,
       confidence,

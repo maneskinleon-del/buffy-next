@@ -18,6 +18,42 @@ function check(overrides: Partial<CheckResult> = {}): CheckResult {
 
 describe('Action Mapper — Golden Test: Killian', () => {
 
+  // ─── H5 regression (2026-09-25): inferred must never copy observed ──
+
+  it('H5: omits inferred when no suggestion/explanation exists (absence = no inference)', () => {
+    const results: CheckResult[] = [
+      check({ id: 'cpu-status', category: 'CPU', message: 'CPU: 85% usage' }),
+    ];
+
+    const actions = mapActions(results, 'windows');
+    const action = actions.find(a => a.id === 'close-heavy-processes');
+    expect(action).toBeDefined();
+    expect(action!.inferred).toBeUndefined();
+  });
+
+  it('H5: emits inferred only from suggestion/explanation (never from message)', () => {
+    const results: CheckResult[] = [
+      check({ id: 'cpu-status', category: 'CPU', message: 'CPU: 85% usage', suggestion: 'Close unused applications' }),
+    ];
+
+    const actions = mapActions(results, 'windows');
+    const action = actions.find(a => a.id === 'close-heavy-processes');
+    expect(action).toBeDefined();
+    expect(action!.inferred).toBe('Close unused applications');
+    expect(action!.inferred).not.toBe(action!.observed);
+  });
+
+  it('H5: when an explanation exists, inferred differs from observed', () => {
+    const results: CheckResult[] = [
+      check({ id: 'gpu-generic-driver', category: 'GPU', message: 'Generic driver', explanation: 'Generic drivers limit graphics performance' }),
+    ];
+
+    const actions = mapActions(results, 'windows');
+    const action = actions.find(a => a.id === 'install-gpu-driver');
+    expect(action).toBeDefined();
+    expect(action!.inferred).toBe('Generic drivers limit graphics performance');
+  });
+
   it('should map "Roblox lag" diagnosis to actionable steps', () => {
     const results: CheckResult[] = [
       check({ id: 'cpu-status', category: 'CPU', message: 'CPU: 85% usage' }),

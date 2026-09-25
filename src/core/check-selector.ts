@@ -23,6 +23,9 @@ const DEFAULT_DIAGNOSTIC_CHECKS: CheckName[] = [
  * Ordered by specificity: most specific first.
  */
 const SPECIFIC_PATTERNS: Array<{ pattern: RegExp; checks: CheckName[] }> = [
+  // CPU (H2 fix 2026-09-25: the word "cpu" was absent from EVERY selector
+  // vocabulary — "uso alto de CPU" fell through all patterns → no_evidence)
+  { pattern: /\bcpu\b|procesador/i, checks: ['cpu', 'processes'] },
   // Network
   { pattern: /internet|red|wifi|conexi[oó]n|network|dns/i, checks: ['network'] },
   // Storage
@@ -72,7 +75,7 @@ const NON_DIAGNOSTIC_PATTERNS: RegExp[] = [
  * Diagnostic signals — words that indicate the user has a system problem.
  * If ANY of these appear, the query is diagnostic even if vague.
  */
-const DIAGNOSTIC_SIGNALS = /lent[oa]?|congela|traba|tarda|demora|pesado|tirones|anda mal|responde mal|no funciona|problema|error|falla|crash|bug|raro|mal|algo|desde ayer|antes|como antes|virus|malware|calien|temperatura|ram|memoria|disco|espacio|wifi|internet|red|gpu|driver|proceso|app|permiso|admin/i;
+const DIAGNOSTIC_SIGNALS = /lent[oa]?|congela|traba|tarda|demora|pesado|tirones|anda mal|responde mal|no funciona|problema|error|falla|crash|bug|raro|mal|algo|desde ayer|antes|como antes|virus|malware|calien|temperatura|ram|memoria|disco|espacio|wifi|internet|red|gpu|driver|proceso|app|permiso|admin|\bcpu\b|procesador|uso alto/i;
 
 // ─── Main selector ─────────────────────────────────────────
 

@@ -283,7 +283,11 @@ export function renderDiagnosticResponse(response: DiagnosticResponse): string {
         : E.info;
       lines.push(`  ${confIcon} ${action.recommended}`);
       lines.push(`     ${C.dim}Observado: ${action.observed}${C.reset}`);
-      lines.push(`     ${C.dim}Inferido: ${action.inferred}${C.reset}`);
+      // H5 contract: inferred is emitted only when a real inference exists;
+      // its absence is the signal "no inference" (never copy Observed).
+      if (action.inferred) {
+        lines.push(`     ${C.dim}Inferido: ${action.inferred}${C.reset}`);
+      }
 
       // Platform-specific instructions
       const platformInst = action.instructions.find(i =>

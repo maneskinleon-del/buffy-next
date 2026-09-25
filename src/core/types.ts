@@ -325,7 +325,14 @@ export interface PlatformInstructions {
 export interface RecommendedAction {
   id: string;
   observed: string;
-  inferred: string;
+  /**
+   * Inference derived from observations (possible cause — NOT measured).
+   * Optional by contract (H5 fix, 2026-09-25): ABSENCE means "no real
+   * inference exists". Do NOT fall back to copying `observed` — presenting a
+   * measurement as an inference violates the epistemic contract (E4.1:
+   * OBSERVED ≠ INFERRED). See action-mapper.ts.
+   */
+  inferred?: string;
   recommended: string;
   instructions: PlatformInstructions[];
   confidence: Confidence;

@@ -118,14 +118,18 @@ describe('Diagnose — v0.8 Canonical Pipeline', () => {
     const result = await diagnose(adapter, 'mi PC está lenta');
     // With high CPU, should get at least one action
     expect(result.actions.length).toBeGreaterThan(0);
-    // Actions should have v0.8 fields
+    // Actions should have v0.8 fields (H5 contract 2026-09-25: inferred is
+    // OPTIONAL — present only with real inference; absence = no inference)
     const action = result.actions[0];
     expect(action.id).toBeDefined();
     expect(action.observed).toBeDefined();
-    expect(action.inferred).toBeDefined();
     expect(action.recommended).toBeDefined();
     expect(action.confidence).toBeDefined();
     expect(action.instructions).toBeDefined();
+    if (action.inferred !== undefined) {
+      // If present, it must NOT be a copy of observed (H5 regression guard)
+      expect(action.inferred).not.toBe(action.observed);
+    }
   });
 });
 

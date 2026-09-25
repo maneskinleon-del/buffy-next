@@ -88,4 +88,25 @@ describe('Check Selector', () => {
     expect(selectChecks('cuánto es 2+2')).toEqual([]);
     expect(selectChecks('cuéntame un chiste')).toEqual([]);
   });
+
+  // ─── H2 regression (2026-09-25): "cpu" was absent from every vocabulary ──
+
+  it('H2: "uso alto de CPU" selects cpu + processes', () => {
+    expect(selectChecks('uso alto de CPU')).toEqual(
+      expect.arrayContaining(['cpu', 'processes']),
+    );
+  });
+
+  it('H2: "cpu" matches with word boundary (no false positives inside words)', () => {
+    expect(selectChecks('mi cpu está lenta')).toContain('cpu');
+    expect(selectChecks('procesador recalentado')).toContain('cpu');
+    // "occupare" contains "cpu" as substring but \b requires word boundaries
+    expect(selectChecks('occupare')).toEqual([]);
+  });
+
+  it('H2: "uso alto de CPU" has diagnostic intent even without pattern match', () => {
+    // Regression guard for DIAGNOSTIC_SIGNALS too, not just SPECIFIC_PATTERNS
+    const checks = selectChecks('consumo de cpu elevado');
+    expect(checks).toContain('cpu');
+  });
 });
