@@ -19,6 +19,7 @@ import {
   toJSON,
 } from './core/presenter.js';
 import { loadState, updateState, ensureBuffyDir } from './state/store.js';
+import { stripFlags } from './shared/cli-args.js';
 import {
   recordRequestMetrics,
   buildRequestMetrics,
@@ -34,6 +35,16 @@ const command = args[0] || '';
 const jsonMode = args.includes('--json');
 const contextMode = args.includes('--context');
 const pilotMode = args.includes('--pilot');
+
+/**
+ * Raw args with recognized flags removed (H4 fix 2026-09-25):
+ * flags are consumed above via includes(); the remaining tokens are the
+ * command + user text. Building user-facing text (e.g. the diagnose query)
+ * from the unfiltered array leaked flags into the payload
+ * ("query": "temperatura --json"). The CLI has no flags that take a value,
+ * so every token starting with `--` is a flag.
+ */
+const positionalArgs = stripFlags(args);
 
 async function main() {
   // Mutual exclusion: --json and --context cannot coexist
@@ -63,7 +74,7 @@ async function main() {
         await cmdCapabilities(adapter);
         break;
       case 'diagnose':
-        await cmdDiagnose(adapter, args.slice(1).join(' '));
+        await cmdDiagnose(adapter, positionalArgs.slice(1).join(' '));
         break;
       case 'act':
         await cmdAct(adapter, args[1], args[2]);

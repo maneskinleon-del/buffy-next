@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isGenericGpu, isKnownMobileGpu } from './gpu.js';
+import { isGenericGpu, isKnownMobileGpu, extractGpuSlot, extractDriverFromLspciK } from './gpu.js';
 
 // ─── isGenericGpu (blacklist) ──────────────────────────────
 
@@ -201,5 +201,49 @@ describe('GPU classification cross-check', () => {
   it('VMware virtual: is generic, not known mobile', () => {
     expect(isGenericGpu('VMware SVGA 3D')).toBe(true);
     expect(isKnownMobileGpu('VMware SVGA 3D')).toBe(false);
+  });
+});
+
+// ─── extractGpuSlot / extractDriverFromLspciK (H1b regression) ──
+
+// Real output from the dev system (EndeavourOS, Ryzen 3400G iGPU, 2026-09-25)
+const REAL_LSPCI_LINE = '07:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8)';
+const REAL_LSPCI_K = '07:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Picasso/Raven 2 [Radeon Vega Series / Radeon Vega Mobile Series] (rev c8)\n\tSubsystem: ASUSTeK Computer Inc. Device 8672\n\tKernel driver in use: amdgpu\n\tKernel modules: amdgpu';
+
+describe('extractGpuSlot — H1b: driver must come from the VGA device, not the first PCI device', () => {
+
+  it('H1b regression: extracts slot from a real VGA lspci line', () => {
+    expect(extractGpuSlot(REAL_LSPCI_LINE)).toBe('07:00.0');
+  });
+
+  it('extracts slot from 3D controller line', () => {
+    expect(extractGpuSlot('03:00.0 3D controller: NVIDIA Corporation GA106')).toBe('03:00.0');
+  });
+
+  it('returns null for a line without a leading slot', () => {
+    expect(extractGpuSlot('Kernel driver in use: pcieport')).toBeNull();
+  });
+
+  it('returns null for empty input', () => {
+    expect(extractGpuSlot('')).toBeNull();
+  });
+
+  it('rejects slot-like strings that are not valid PCI addresses', () => {
+    expect(extractGpuSlot('../etc/passwd VGA controller: x')).toBeNull();
+  });
+});
+
+describe('extractDriverFromLspciK — H1b: scoped lspci -k parsing', () => {
+
+  it('H1b regression: extracts the GPU driver from a real scoped block (amdgpu, not pcieport)', () => {
+    expect(extractDriverFromLspciK(REAL_LSPCI_K)).toBe('amdgpu');
+  });
+
+  it('returns null when the device has no kernel driver bound', () => {
+    expect(extractDriverFromLspciK('07:00.0 VGA compatible controller: X')).toBeNull();
+  });
+
+  it('returns null for empty input', () => {
+    expect(extractDriverFromLspciK('')).toBeNull();
   });
 });

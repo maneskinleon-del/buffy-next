@@ -10,7 +10,7 @@ import type {
   Capability,
   PlatformCapabilities,
 } from '../core/types.js';
-import { isGenericGpu } from '../shared/gpu.js';
+import { isGenericGpu, extractGpuSlot, extractDriverFromLspciK } from '../shared/gpu.js';
 
 function sh(command: string): string {
   try {
@@ -34,10 +34,14 @@ function detectGpu(): { name: string | null; driver: string | null; isGeneric: b
     const nameMatch = lspciLine.match(/(?:VGA|3D|Display)(?:\s+compatible)?\s+controller:\s*(.+)$/i);
     const name = nameMatch?.[1]?.trim() ?? null;
 
-    // Extract driver from lspci -k
-    const driverLine = sh('lspci -k 2>/dev/null | grep -i "kernel driver" | head -1');
-    const driverMatch = driverLine.match(/Kernel driver in use:\s*(.+)$/i);
-    const driver = driverMatch?.[1]?.trim() ?? null;
+    // Extract driver from lspci -k scoped to THIS device's slot (H1b fix:
+    // unscoped `grep "kernel driver" | head -1` grabbed the first PCI
+    // device — usually the pcieport bridge — instead of the GPU).
+    const slot = extractGpuSlot(lspciLine);
+    const lspciKOutput = slot
+      ? sh(`lspci -k -s '${slot}' 2>/dev/null`)
+      : '';
+    const driver = extractDriverFromLspciK(lspciKOutput);
 
     return {
       name,
