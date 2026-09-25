@@ -39,7 +39,12 @@ Sub-hallazgo H1b (misma capa de parsing): `doctor` reporta driver GPU `pcieport`
 
 "Uso alto de CPU" en español no selecciona ni `cpu` — la consulta más canónica del dominio cae fuera del diccionario. Cobertura, no lógica.
 
-### H3 — Keyword "temperature" solo inglés [verificado 2026-09-25]
+### H3 — Keyword "temperature" solo inglés [verificado 2026-09-25] → **RETRACTADO 2026-09-25 (mapeo src)**
+
+> **Corrección (ver `SRC-MAP-H1-H8-2026-09-25.md`):** "temperatura" SÍ está en el
+> patrón del selector (`check-selector.ts:29`). La diferencia entre corridas era
+> el proceso freebuff fluctuando (estado del sistema), no el idioma. Hallazgo
+> retirado; H2 ("cpu" ausente del vocabulario) permanece.
 
 "temperatura del sistema" (ES) no matchea la keyword del selector; "temperatura" a secas sí (match parcial). Mismo mecanismo de H2, mostrado con par mínimo.
 

@@ -92,6 +92,15 @@ Todos los tipos de la spec definidos en `types.ts`. Aliases backward-compatible 
 | render resultado | ✅ |
 | Input sanitization | ✅ sanitizeToolName() |
 
+> ⚠️ **Anotación de vigencia (2026-09-25)**: la fila `dryRun → mostrar plan | ✅` de esta
+> tabla NO describe el HEAD actual. Desde el rediseño v2.2, `ActionDefinition` es
+> metadata-only (`src/core/types.ts:113` — "no execute/dryRun/rollback/verify") y el
+> dryRun() fue reemplazado por `ActionPlanner.preview` (estático, sin ejecución).
+> La función de "ver el plan sin ejecutar" vive hoy en el modo `--json` de `act`
+> (`pipeline.ts:443-447`: muestra el plan y retorna ANTES de `gate.execute` — verificado
+> empíricamente 2026-09-25 con `act list-processes --json`). Mapeo completo:
+> `docs/research/SRC-MAP-H1-H8-2026-09-25.md` (H7, veredicto (c)).
+
 ## §7 Flujo `buffy diagnose` — ✅ Cumple
 
 `cmdDiagnose` usa `executeWithGates()` — mismo camino de gates que `cmdAct`. Verificado en Termux real con query "mi GPU usa driver genérico".
