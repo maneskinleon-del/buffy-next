@@ -275,3 +275,13 @@ Se reabrirá solo si aparece simultáneamente:
 - El checkpoint B→C (Sección 0) y el experimento PRE-WATCHDOG (Sección 1) forman parte del estado operativo documentado.
 - Cualquier cambio arquitectónico o de capacidad debe partir de este documento y de la evidencia del código en este HEAD.
 - La complejidad debe seguir siendo proporcional a la tarea real.
+
+---
+
+## 9. AGY routing selection round — CLOSED (2026-09-23)
+
+**Conclusión:** selección de `buffy_context` estable hoy (9/9 PASS: workspaces poblados y vacíos), alcance limitado (solo selección, AGY 1.1.19, GPT-OSS 120B Medium, prompt de análisis de entorno), **sin RAG ni contrato de discovery nuevo** — los FAIL del 14 sep no se reprodujeron y no hay fallo observable que justifique capas nuevas.
+
+- **Checkpoint:** `docs/research/AGY-BUFFY-ROUTING-C3R-RESULT-2026-09-23.md`
+- **Evidencia:** `~/docs/experiments/2026-09-23-c3r-transcripts/` (30 archivos, sha256 30/30 OK)
+- **Reabrir solo con:** un disparador real — otro modelo, o un fallo de selección en uso normal.
