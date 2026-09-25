@@ -6,6 +6,26 @@
 
 ---
 
+## ⚠️ Anotación de vigencia (2026-09-25) — leer antes del hallazgo central
+
+**[orig]** El "hallazgo central" de §0 abajo (workspace de C3′ vacío en runtime →
+el modelo vio solo `codegraph` en `<mcp_servers>` → resolvió con `run_command`)
+fue el diagnóstico aceptado el 15-sep. Se conserva íntegro como registro forense.
+
+**[verificado 2026-09-23]** La ronda de replicación del 23-sep
+(`AGY-BUFFY-ROUTING-C3R-RESULT-2026-09-23.md`, §5.2 y §7.2) mostró **3/3 PASS en
+workspace vacío** (C2-R×3) junto a 6/6 PASS en poblado — 9/9 total. La hipótesis
+"workspace vacío → run_command/FAIL" **no está soportada como condición
+suficiente**: los FAIL del 14-sep no se reprodujeron (contraste 2/5 vs 0/9 ≈ 11%,
+no distinguible del ruido; §7.2.2). Este diagnóstico queda **revisado y superado**
+como explicación vigente del routing.
+
+**Refinamiento posterior (2026-09-25):** `C5B-RESULT-2026-09-25.md` — la selección
+de `buffy_context` es task-sensible (métrica secundaria p≈0.029, exploratoria),
+en dirección contract-correcta ("Never for: codebase exploration").
+
+---
+
 ## 0. Resumen ejecutivo
 
 C3' fue una repetición de C3 (workspace independiente poblado) bajo condiciones
