@@ -76,6 +76,12 @@ Demostrar que `buffy doctor --json` distingue correctamente tres estados de Shiz
 - **Preexistente y no relacionado con Shizuku**
 - No se modifica el test para hacerlo pasar
 
+> **Nota de lectura (2026-09-25):** el conteo y el fallo de arriba corresponden a este
+> checkpoint congelado (2026-09-11), NO al estado de HEAD. El flake fue corregido al día
+> siguiente en `094a3af` (2026-09-12): `latencyMs` excluido de la igualdad byte-a-byte,
+> validación `number ≥ 0` retenida. Estado de suite al HEAD actual: **634/634**
+> (38 archivos, 3 pasadas completas consecutivas) + `tsc --noEmit` limpio.
+
 ---
 
 ## 1. PRE-WATCHDOG ADB 5555 VERIFICATION — experimento ejecutado
