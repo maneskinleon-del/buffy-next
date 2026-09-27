@@ -6,7 +6,7 @@ import { createAdapter } from './adapters/index.js';
 import { runDoctor } from './core/doctor.js';
 import { diagnose } from './core/diagnose.js';
 import { buildContext } from './core/context.js';
-import { findActionById } from './actions/registry.js';
+import { findActionById, getActionCatalog } from './actions/registry.js';
 import { executeWithGates } from './core/pipeline.js';
 import { BUFFY_VERSION } from './core/version.js';
 import { startMcpServer } from './mcp.js';
@@ -143,10 +143,16 @@ async function cmdDoctor(adapter: Awaited<ReturnType<typeof createAdapter>>) {
 async function cmdCapabilities(adapter: Awaited<ReturnType<typeof createAdapter>>) {
   const caps = await adapter.capabilities();
 
+  // H8 (2026-09-27): la discovery deja de estar vacía. El contrato
+  // (BUFFY-AGENT-CONTRACT.md) promete "acciones con su nivel de seguridad y
+  // requisitos" en esta superficie; cmdAct ya dirige aquí para descubrir.
+  // Listar ≠ autorizar: la ejecución sigue siendo exclusivamente via ActionGate.
+  const actions = getActionCatalog();
+
   if (jsonMode) {
-    console.log(toJSON(caps));
+    console.log(toJSON({ capabilities: caps, actions }));
   } else {
-    console.log(renderCapabilities(caps));
+    console.log(renderCapabilities(caps, actions));
   }
 }
 

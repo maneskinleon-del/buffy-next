@@ -191,7 +191,10 @@ export function renderActionResult(result: ActionResult): string {
 
 // ─── Capabilities Report ────────────────────────────────────
 
-export function renderCapabilities(capabilities: Capability[]): string {
+export function renderCapabilities(
+  capabilities: Capability[],
+  actions: import('../actions/registry.js').ActionCatalogEntry[] = [],
+): string {
   const lines: string[] = [];
 
   lines.push('');
@@ -214,6 +217,21 @@ export function renderCapabilities(capabilities: Capability[]): string {
     for (const c of missing) {
       lines.push(`  ${E.warn} ${c.name}${c.description ? ` — ${c.description}` : ''}`);
     }
+    lines.push('');
+  }
+
+  // H8 (2026-09-27): discovery de acciones — id + nivel + requisitos.
+  // Contract: discovery ≠ authorization (la ejecución es via ActionGate).
+  if (actions.length > 0) {
+    lines.push(`${C.bold}Acciones disponibles (${actions.length}):${C.reset}`);
+    for (const a of actions) {
+      const levelTag = a.level === 'auto_safe' ? `${C.green}auto_safe${C.reset}`
+        : a.level === 'confirm' ? `${C.yellow}confirm${C.reset}`
+        : `${C.red}forbidden${C.reset}`;
+      const prereqs = a.prerequisites.length > 0 ? ` [requiere: ${a.prerequisites.join(', ')}]` : '';
+      lines.push(`  ${E.tool} ${a.id} — ${a.name} (${levelTag})${prereqs}`);
+    }
+    lines.push(`\n${C.dim}Descubrí qué hace cada acción con: buffy capabilities — la ejecución pasa por ActionGate.${C.reset}`);
     lines.push('');
   }
 

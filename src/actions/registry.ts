@@ -2,7 +2,7 @@
 // Central catalog of all available actions (metadata only).
 // Physical executors are registered separately with ActionGate.
 
-import type { Observation, ObservationCategory, SuggestedAction, ActionDefinition, PlatformName } from '../core/types.js';
+import type { Observation, ObservationCategory, SuggestedAction, ActionDefinition, PlatformName, SecurityLevel } from '../core/types.js';
 import { checkDriverStatus } from './catalog/check-driver-status.js';
 import { changePowerPlan } from './catalog/change-power-plan.js';
 import { checkSystemTemp } from './catalog/check-system-temp.js';
@@ -31,6 +31,34 @@ export function getAllActions(): ActionDefinition[] {
 
 export function findActionById(id: string): ActionDefinition | undefined {
   return ALL_ACTIONS.find(a => a.id === id);
+}
+
+/**
+ * H8 (2026-09-27): catálogo expuesto a la superficie de discovery.
+ * `capabilities` es la superficie que `act` promete para descubrir acciones
+ * — hasta hoy el catálogo existía solo en código y la discovery estaba vacía
+ * donde más importa (saber qué se puede hacer sin intentarlo).
+ *
+ * Contract: discovery ≠ authorization. Listar una acción NO la autoriza:
+ * la ejecución pasa exclusivamente por ActionGate (levels/prerequisites son
+ * metadata para decidir si vale la pena invocar `act`, no atajos).
+ */
+export interface ActionCatalogEntry {
+  id: string;
+  name: string;
+  /** auto_safe | confirm | forbidden — el nivel que ActionGate aplicará */
+  level: SecurityLevel;
+  /** Prerequisitos resumidos (e.g. ['adb', 'root']) */
+  prerequisites: string[];
+}
+
+export function getActionCatalog(): ActionCatalogEntry[] {
+  return ALL_ACTIONS.map(a => ({
+    id: a.id,
+    name: a.name,
+    level: a.level,
+    prerequisites: a.prerequisites,
+  }));
 }
 
 /**

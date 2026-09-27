@@ -101,6 +101,9 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
 
   // Buffy dependencies check
   for (const tool of capabilities) {
+    // H1 (D1-c): ADB se reporta abajo en dos filas desambiguadas
+    // (adb-binario / adb-dispositivo) — la fila genérica duplicaría.
+    if (tool.name === 'ADB') continue;
     if (tool.status === 'missing') {
       items.push({
         id: `tool-${tool.name}`,
@@ -112,6 +115,35 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
     }
   }
 
+  // H1 (D1-c, 2026-09-27): instalado ≠ conectado. Antes la fila de
+  // privilegios "ADB: disponible" heredaba la semántica de detectPrivileges
+  // (binario Y dispositivo en estado `device`), mientras capabilities
+  // verificaba solo el binario — misma etiqueta, dos significados.
+  // Ahora: dos filas con semántica explícita. deviceConnected solo se emite
+  // cuando el adapter lo mide (linux/android); su ausencia = no medido, NO falso.
+  const adbCap = capabilities.find(c => c.name === 'ADB');
+  const adbBinaryAvailable = adbCap?.status === 'installed';
+  items.push({
+    id: 'adb-binario',
+    severity: adbBinaryAvailable ? 'ok' : 'warning',
+    category: 'Plataforma',
+    message: `ADB (binario): ${adbBinaryAvailable ? 'instalado' : 'no instalado'}`,
+    explanation: adbBinaryAvailable
+      ? undefined
+      : 'Sin el binario adb no hay diagnóstico ni acciones ADB.',
+  });
+  if (adbBinaryAvailable && system.privileges?.adb !== undefined) {
+    items.push({
+      id: 'adb-dispositivo',
+      severity: system.privileges.adb ? 'ok' : 'warning',
+      category: 'Plataforma',
+      message: `ADB (dispositivo): ${system.privileges.adb ? 'conectado' : 'no conectado'}`,
+      explanation: system.privileges.adb
+        ? undefined
+        : 'El binario está instalado pero ningún dispositivo está en estado "device". Revisá conexión USB, depuración USB o corré `adb devices`.',
+    });
+  }
+
   // Platform privileges check (Android: Shell / Shizuku / Root / ADB)
   const priv = system.privileges;
   if (priv) {
@@ -121,7 +153,8 @@ function analyzeSystem(system: SystemInfo, capabilities: Capability[]): CheckRes
       { id: 'priv-shell', label: 'Shell', available: priv.shell },
       { id: 'priv-shizuku', label: 'Shizuku', available: priv.shizuku },
       { id: 'priv-root', label: 'Root', available: priv.root },
-      { id: 'priv-adb', label: 'ADB', available: priv.adb },
+      // priv-adb removido (H1, D1-c): "ADB: disponible" era ambiguo —
+      // la conectividad se reporta en adb-dispositivo, el binario en adb-binario.
     ];
     for (const p of privItems) {
       if (p.id === 'priv-shizuku') {
