@@ -163,7 +163,10 @@ export async function applyFreshnessGating(
 
   for (const obs of observations) {
     if (!obs.observedAt) {
-      // Legacy observation without timestamp — include but mark as observed
+      // Legacy observation without timestamp — include but mark as observed.
+      // H6 2026-09-25: stamp por-observación para que TODO ítem que sale del
+      // gating lleve epistemicState (contrato E4.1: siempre emitido).
+      obs.epistemicState = 'observed';
       included.push(obs);
       continue;
     }
@@ -206,6 +209,8 @@ export async function applyFreshnessGating(
 
               if (newState === 'observed') {
                 // Refresh succeeded — use new data
+                // H6 2026-09-25: stamp por-observación del valor real post-refresh
+                freshObs.epistemicState = newState;
                 refreshed.push(freshObs);
                 instr.refreshPerformed = true;
                 instr.epistemicStateAfter = 'observed';

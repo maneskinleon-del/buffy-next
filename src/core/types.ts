@@ -75,6 +75,12 @@ export interface Capability {
   status: 'installed' | 'missing' | 'unknown';
   version?: string;
   description?: string;
+  /**
+   * H1 (2026-09-27): para tools de conexión (ADB), conectividad real del
+   * dispositivo en estado `device` — independiente de la instalación del
+   * binario (instalado ≠ conectado, D1-c). Undefined = no medido.
+   */
+  deviceConnected?: boolean;
 }
 
 // ─── Security ──────────────────────────────────────────────
@@ -231,6 +237,16 @@ export interface CheckResult {
   observedAt?: string;
   /** Fuente de la medición (E4.1) */
   source?: string;
+  /**
+   * Estado epistémico del ítem (E4.1, H6 2026-09-25): clasificación del
+   * ítem mismo, siempre emitida en el output de diagnose — ausencia sería
+   * "no clasificado". Serializado en analyzeForQuery; el gating lo re-stampea
+   * en el boundary. NO eliminar: contrato E4.1 lo declara obligatorio en
+   * Observation y los consumidores externos no deben inferirlo del contexto.
+   */
+  epistemicState?: EpistemicState;
+  /** Edad en ms desde observedAt hasta "ahora" (E4.1) */
+  ageMs?: number;
 }
 
 /** Backward compat alias */

@@ -181,7 +181,6 @@ function computeObservability(
 
 // ─── Observation builder ───────────────────────────────────
 // Converts CheckName[] (from selector) into CheckResult[] (with real system data).
-// This function is unchanged from the previous version.
 
 /**
  * Maps CheckName to ObservationCategory for freshness classification.
@@ -197,17 +196,30 @@ const CHECK_TO_CATEGORY: Record<string, ObservationCategory> = {
   network: 'network',
 };
 
-function analyzeForQuery(
+/**
+ * Serializa cada observación con su estado epistémico (E4.1, H6).
+ *
+ * HOY observedAt es `now` → todo ítem nace 'observed'; cuando exista cache,
+ * observedAt variará por ítem y la clasificación por-ítem evita migrar
+ * consumidores. Exportado como seam de test (H6: valor forzado no-observed).
+ *
+ * Bug H6, 2026-09-25.
+ */
+export function analyzeForQuery(
   system: Awaited<ReturnType<PlatformAdapter['systemInfo']>>,
   checks: string[],
 ): CheckResult[] {
   const items: CheckResult[] = [];
   const observedAt = new Date().toISOString();
   const source = 'LinuxAdapter.analyzeForQuery';
+  const ageMs = calculateAgeMs(observedAt);
 
   if (checks.includes('cpu')) {
     const cpuOk = !system.cpu.usage || system.cpu.usage < 80;
     const category = CHECK_TO_CATEGORY['cpu'];
+    // classifyEpistemicState se serializa por-observación en el output.
+    // NO eliminar: contrato E4.1 lo declara obligatorio.
+    // Bug H6, 2026-09-25.
     const epistemicState = classifyEpistemicState(observedAt, category);
     items.push({
       id: 'cpu-status',
@@ -216,6 +228,8 @@ function analyzeForQuery(
       message: `CPU: ${system.cpu.model} (${system.cpu.cores} cores)`,
       observedAt,
       source: `${source}.cpu`,
+      epistemicState,
+      ageMs,
     });
   }
 
@@ -229,6 +243,8 @@ function analyzeForQuery(
       message: `RAM: ${system.memory.availableGB} GB disponibles (${system.memory.usedPercent}% usado)`,
       observedAt,
       source: `${source}.memory`,
+      epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['ram']),
+      ageMs,
     });
   }
 
@@ -242,6 +258,8 @@ function analyzeForQuery(
         explanation: 'Un driver genérico limita el rendimiento en juegos y apps gráficas.',
         observedAt,
         source: `${source}.gpu`,
+        epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['gpu']),
+        ageMs,
       });
     } else {
       items.push({
@@ -251,6 +269,8 @@ function analyzeForQuery(
         message: `GPU: ${system.gpu.name} (driver: ${system.gpu.driver})`,
         observedAt,
         source: `${source}.gpu`,
+        epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['gpu']),
+        ageMs,
       });
     }
   }
@@ -264,6 +284,8 @@ function analyzeForQuery(
       message: `Temperatura CPU: ${temp}°C`,
       observedAt,
       source: `${source}.temperature`,
+      epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['temperature']),
+      ageMs,
     });
   }
 
@@ -278,6 +300,8 @@ function analyzeForQuery(
         message: `Disco ${device.mount}: ${device.freeGB} GB libres / ${device.totalGB} GB`,
         observedAt,
         source: `${source}.storage`,
+        epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['storage']),
+        ageMs,
       });
     }
   }
@@ -292,6 +316,8 @@ function analyzeForQuery(
         message: `Procesos consumiendo mucho CPU: ${heavy.map(p => p.name).join(', ')}`,
         observedAt,
         source: `${source}.processes`,
+        epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['processes']),
+        ageMs,
       });
     } else {
       items.push({
@@ -301,6 +327,8 @@ function analyzeForQuery(
         message: 'Sin procesos anómalos detectados',
         observedAt,
         source: `${source}.processes`,
+        epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['processes']),
+        ageMs,
       });
     }
   }
@@ -315,6 +343,8 @@ function analyzeForQuery(
       message: 'Verificación de red solicitada — ejecuta `buffy act check-network` para diagnóstico detallado',
       observedAt,
       source: `${source}.network`,
+      epistemicState: classifyEpistemicState(observedAt, CHECK_TO_CATEGORY['network']),
+      ageMs,
     });
   }
 
