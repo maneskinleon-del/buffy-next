@@ -2,6 +2,18 @@
 
 All notable changes to Buffy Next will be documented in this file.
 
+## [Unreleased]
+
+### Added — PR4: superficie de discovery y desambiguación epistémica (2026-09-27)
+
+- **H8 — `buffy capabilities` expone el catálogo de acciones.** `capabilities --json` ahora retorna `{ capabilities, actions }` con `id`, `name`, `level` (auto_safe/confirm/forbidden) y `prerequisites` por acción (`getActionCatalog()` en `src/actions/registry.ts`). El render humano agrega la sección "Acciones disponibles". Contract: discovery ≠ authorization — listar no autoriza, la ejecución sigue siendo exclusivamente via ActionGate. **BREAKING (JSON):** el output de `capabilities --json` deja de ser un array plano; el único consumidor conocido es subprocess CLI (sin superficie MCP en código).
+- **H1 (D1-c) — instalado ≠ conectado.** `doctor` desambigua ADB en dos filas: `ADB (binario)` (de `capabilities`, instalación) y `ADB (dispositivo)` (de `privileges.adb`, dispositivo en estado `device`). La fila ambigua `priv-adb` ("ADB: disponible" — dos semánticas bajo una etiqueta) se elimina. `Capability` gana `deviceConnected?` para que el adapter pueda medir conectividad sin fabricar false. La fila genérica de dependencias ya no duplica ADB.
+- **D3 (rename plan-mode) — docs-only.** Verificado: cero `--dry-run` en src/ (solo comentarios históricos). El reemplazo v2.2 por `ActionPlanner.preview` fue deliberado; `act --json` es el plan-mode. Sin alias, sin deprecation — si aparece un consumidor roto, recién entonces (c).
+
+### Added — PR3: H6, brecha de serialización epistémica cerrada (2026-09-27)
+
+- **`epistemicState` + `ageMs` por-observación en `diagnose`.** Los 9 sitios de push de `analyzeForQuery` serializan la clasificación de `classifyEpistemicState` (antes: cálculo muerto — se calculaba y se descartaba). `CheckResult` gana `epistemicState?` + `ageMs?`. El freshness gating re-stampea en el boundary (todo ítem que sale del gating lleva el campo). Telemetría agregada (`staleFields`/`refreshRequired`/`refreshPerformed`) intacta — ortogonal: describe el pipeline, no los ítems.
+
 ## [0.2.2] - 2026-08-28
 
 ### Onboarding & Version Consistency
