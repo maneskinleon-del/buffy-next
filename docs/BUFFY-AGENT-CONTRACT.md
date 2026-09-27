@@ -39,6 +39,20 @@ Interface adicional de diagnóstico (flujo dirigido, nunca ejecuta):
 - `buffy diagnose "query" --json` → selección task-adaptive de checks,
   observaciones con freshness gating, acciones sugeridas y next-diagnostic.
 
+Interface de delegación y topología (C1-c, PR5 2026-09-27):
+
+- `buffy ctx <comando> [args]` → delega por subprocess a scripts de
+  Buffy Context (`buffy-context/scripts/buffy-<comando>.sh`), pass-through
+  estricto: args verbatim, streams sin mediación, exit code del script.
+  Sin args lista los comandos descubiertos (exit 0). Next no conoce la
+  lista de subcomandos de Context (discovery por filesystem) ni lee sus
+  archivos — excepción única: `VERSION` para `buffy env`.
+- `buffy env` → topología de instalación: versión de Next, presencia y
+  versión de Context, comandos ctx disponibles. Complementario a `health`
+  (que reporta subsistemas internos de Next, no topología).
+- Override de instalación: `BUFFY_CONTEXT_REPO` (ubicación del checkout
+  de Context; distinto de `BUFFY_HOME`, que es estado generado).
+
 ## Boundaries
 
 ```text

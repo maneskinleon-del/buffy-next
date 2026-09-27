@@ -20,6 +20,7 @@ import {
 } from './core/presenter.js';
 import { loadState, updateState, ensureBuffyDir } from './state/store.js';
 import { stripFlags } from './shared/cli-args.js';
+import { contextEnvInfo, execCtx, listCtxCommands, resolveContextRepo } from './shared/ctx.js';
 import {
   recordRequestMetrics,
   buildRequestMetrics,
@@ -52,6 +53,59 @@ async function main() {
     console.error('Error: --json y --context son mutuamente excluyentes.');
     console.error('Usa --json para DoctorReport o --context para BuffyContext.');
     process.exit(1);
+  }
+
+  // C1-c / PR5 (2026-09-27): ctx y env dispatch ANTES de createAdapter —
+  // son comandos de topología: deben diagnosticar incluso si el adapter
+  // está roto, y no tocan nada de Next (R4: fallo explícito, no colapso).
+  if (command === 'ctx') {
+    // Tail desde args CRUDOS, no positionalArgs: los flags posteriores a
+    // `ctx <cmd>` son del script de Context (pass-through verbatim, Ajuste
+    // 3b del operador). stripFlags existe para el payload de Next (H4);
+    // aplicarlo aquí le robaría --json al script.
+    const subArgs = args.slice(1);
+    const cmd = subArgs[0];
+    if (!cmd) {
+      // Sin args: exit 0, lista descubierta + usage (Ajuste 2 del operador).
+      // Como `buffy` solo: descubrible, no destructivo.
+      const commands = listCtxCommands();
+      console.log(`\nbuffy ctx — delegación a Buffy Context (${resolveContextRepo()})`);
+      if (commands.length === 0) {
+        console.log('  (sin comandos descubiertos — ¿está clonado el repo?)');
+      } else {
+        for (const c of commands) console.log(`  ${c}`);
+      }
+      console.log('\nUso: buffy ctx <comando> [args]  (args van verbatim al script)\n');
+      return;
+    }
+    const code = await execCtx(cmd, subArgs.slice(1));
+    process.exitCode = code;
+    return;
+  }
+
+  if (command === 'env') {
+    // Diagnóstico de topología (R3): no duplica `buffy health` (que reporta
+    // subsistemas internos de Next). Lee UN archivo de Context: VERSION
+    // (excepción documentada en shared/ctx.ts). Ausencia → null honesto.
+    const ctxInfo = contextEnvInfo();
+    const payload = {
+      buffy_next: { version: BUFFY_VERSION, bin: 'buffy' },
+      buffy_context: {
+        repo: ctxInfo.repo,
+        present: ctxInfo.present,
+        version: ctxInfo.version,
+        ctx_commands: ctxInfo.commands,
+      },
+    };
+    if (jsonMode) {
+      console.log(toJSON(payload));
+    } else {
+      console.log(`\nBuffy Next:   v${BUFFY_VERSION}`);
+      console.log(`Buffy Context: ${ctxInfo.present ? `presente en ${ctxInfo.repo}` : `NO encontrado en ${ctxInfo.repo} (¿está clonado?)`}`);
+      console.log(`  versión:     ${ctxInfo.version ?? 'no disponible'}`);
+      console.log(`  comandos ctx: ${ctxInfo.commands.length > 0 ? ctxInfo.commands.join(', ') : '(ninguno)'}`);
+    }
+    return;
   }
 
   ensureBuffyDir();
@@ -383,6 +437,8 @@ Uso:
   buffy serve --mcp              Iniciar servidor MCP (stdio)
   buffy install --target antigravity
                                  Inyectar MCP + GEMINI.md + superficie AGY
+  buffy ctx <comando> [args]     Delegar a Buffy Context (discovery: buffy ctx)
+  buffy env                      Versiones y rutas de Next + Context
   --json                         Salida en formato JSON
   --pilot                        Activar modo piloto (telemetry)
   --help                         Esta ayuda

@@ -4,6 +4,15 @@ All notable changes to Buffy Next will be documented in this file.
 
 ## [Unreleased]
 
+### Added — PR5: `buffy ctx` (delegador a Context) + `buffy env` (topología) (2026-09-27)
+
+- **`buffy ctx <comando> [args]`** — delegación por subprocess a scripts de Buffy Context (`buffy-context/scripts/buffy-<cmd>.sh`). Pass-through estricto: args **verbatim** (flags incluidos — el tail se toma de argv crudo, no de stripFlags: los flags posteriores a `ctx <cmd>` son del script), streams sin mediación (`stdio: inherit`), exit code del script preservado (no colapsado). Sin args: lista comandos descubiertos, **exit 0**. Discovery por filesystem — Next no conoce la lista de subcomandos de Context (puede crecer sin tocar Next). Validación de nombre `[a-z0-9-]+` antes de interpolar en ruta (bloquea traversal). CWD = repo root de Context (convención de sus scripts). Errores nombran la capa y apuntan a `buffy env`.
+- **`buffy env`** — topología de instalación: versión Next, presencia/ruta/versión de Context (lectura única documentada de `VERSION` — excepción a la no-lectura de archivos de Context), comandos ctx disponibles. Complementario a `health` (subsistemas internos). Diagnóstico para el riesgo de versionado cruzado (R3).
+- **Señales (verificado empíricamente en modo producción):** kill programático al CLI → forward `SIGTERM` **al grupo de procesos del script** (`detached: true` + `kill(-pid)`) — nietos del script (p.ej. `sleep` interno de un bash) mueren también; cero huérfanos. En dev con `tsx` el wrapper intermedio absorbe la señal (artefacto del runner, no del binario).
+- **Override:** `BUFFY_CONTEXT_REPO` ("REPO", no "HOME" — `BUFFY_HOME` ya existe en Context con semántica de estado generado; evitar el patrón H1 en el namespace de env vars).
+- **Dispatch temprano:** `ctx`/`env` corren antes de `createAdapter` — comandos de topología, funcionan aunque el adapter esté roto.
+- Tests: 668 → **679** (+11: validación, discovery, exec pass-through verbatim vía subprocess, exit codes, exit 0 sin args, guard de dispatch temprano, versión null honesta). tsc limpio, build OK.
+
 ### Added — PR4: superficie de discovery y desambiguación epistémica (2026-09-27)
 
 - **H8 — `buffy capabilities` expone el catálogo de acciones.** `capabilities --json` ahora retorna `{ capabilities, actions }` con `id`, `name`, `level` (auto_safe/confirm/forbidden) y `prerequisites` por acción (`getActionCatalog()` en `src/actions/registry.ts`). El render humano agrega la sección "Acciones disponibles". Contract: discovery ≠ authorization — listar no autoriza, la ejecución sigue siendo exclusivamente via ActionGate. **BREAKING (JSON):** el output de `capabilities --json` deja de ser un array plano; el único consumidor conocido es subprocess CLI (sin superficie MCP en código).
