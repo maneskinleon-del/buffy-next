@@ -1,5 +1,5 @@
 // Buffy Next — MCP Server (stdio transport)
-// Pattern: initialize.instructions + single read-only tool (buffy_context)
+// Pattern: initialize.instructions + read-only tools (buffy_context, buffy_verify)
 // Inspired by CodeGraph local mechanism (2026-09-14)
 
 import { createInterface } from 'node:readline';
@@ -7,6 +7,7 @@ import { createAdapter } from './adapters/index.js';
 import { runDoctor } from './core/doctor.js';
 import { buildContext } from './core/context.js';
 import { BUFFY_VERSION } from './core/version.js';
+import { execCtxCaptured } from './shared/ctx.js';
 
 // ─── Instructions (injected during initialize) ───────────────
 // Exported as BUFFY_MCP_INSTRUCTIONS so the installer can prewrite the
@@ -22,6 +23,22 @@ Call \`buffy_context\` before assuming the current state of the environment:
 platform, hardware, available tools, privileges, running processes. Every
 field carries freshness — observed | inferred | stale | unknown — do not
 treat stale or unknown fields as current fact.
+
+There are TWO read-only MCP tools:
+
+  buffy_context  — LIVE environment state: platform, hardware (CPU/RAM/GPU/
+    storage/temperature), available tools, privileges, running processes.
+    Every field carries freshness (observed | inferred | stale | unknown).
+    NOT for codebase exploration, general reasoning, or persistent memory.
+
+  buffy_verify   — FACTUAL integrity of persistent project memory: compares
+    ai-context/INFO-core.md against the live system and returns structured
+    JSON with verified/stale/unknown/expired counts and trust_score.
+    NOT for observing live environment state — use buffy_context for that.
+
+Both tools are read-only and non-destructive. buffy_context is for current
+runtime state; buffy_verify is for knowledge correctness. Choose the right
+tool for the question.
 
 Never for: codebase exploration, general reasoning, or persistent project
 memory.
@@ -48,6 +65,24 @@ export const BUFFY_CONTEXT_TOOL = {
     // properties-first so AGY's cached `parameters` matches the prewritten surface.
     properties: {},
     type: 'object' as const,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
+};
+
+export const BUFFY_VERIFY_TOOL = {
+  name: 'buffy_verify',
+  description:
+    'Factual integrity check of persistent project memory (INFO-core vs live system). ' +
+    'Returns JSON with verified/stale/unknown/expired counts and trust_score. Read-only.',
+  inputSchema: {
+    type: 'object' as const,
+    properties: {},
+    additionalProperties: false,
   },
   annotations: {
     readOnlyHint: true,
@@ -84,7 +119,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
     return {
       jsonrpc: '2.0',
       id,
-      result: { tools: [BUFFY_CONTEXT_TOOL] },
+      result: { tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL] },
     };
   }
 
@@ -92,7 +127,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
     const params = (req.params ?? {}) as Record<string, unknown>;
     const toolName = params.name as string;
 
-    if (toolName !== 'buffy_context') {
+    if (toolName !== 'buffy_context' && toolName !== 'buffy_verify') {
       return {
         jsonrpc: '2.0',
         id,
@@ -115,8 +150,43 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
   };
 }
 
-async function handleToolCall(): Promise<Record<string, unknown>> {
+export async function handleToolCall(toolName: string): Promise<Record<string, unknown>> {
   try {
+    if (toolName === 'buffy_verify') {
+      const result = await execCtxCaptured('verify', ['--json']);
+
+      if (result.timedOut) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `buffy_verify: timed out after 30s. stdout parcial: ${result.stdout}\nstderr: ${result.stderr}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      if (!result.stdout) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${result.stderr || `buffy_verify falló con código ${result.code}`}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // buffy-verify.sh --json produces JSON on stdout (even on non-zero exit
+      // for error items). Return the raw JSON — the MCP client parses it.
+      return {
+        content: [{ type: 'text', text: result.stdout }],
+      };
+    }
+
+    // Default: buffy_context (live environment state)
     const adapter = await createAdapter();
     const report = await runDoctor(adapter);
     const context = buildContext(report);
@@ -137,6 +207,21 @@ async function handleToolCall(): Promise<Record<string, unknown>> {
 export function startMcpServer(): void {
   const rl = createInterface({ input: process.stdin });
 
+  // Track in-flight async handlers so the close listener waits for
+  // pending tools/call responses before exiting. Without this, piping
+  // multiple NDJSON lines via stdin (e.g. printf '...' | buffy serve --mcp)
+  // kills the process mid-handler — the last response is lost because
+  // rl.on('close') fires the instant stdin EOFs, before the awaited
+  // handleToolCall resolves.
+  let pending = 0;
+  let stdinClosed = false;
+
+  function maybeExit(): void {
+    if (stdinClosed && pending === 0) {
+      process.exit(0);
+    }
+  }
+
   rl.on('line', async (line: string) => {
     const trimmed = line.trim();
     if (!trimmed) return;
@@ -152,9 +237,17 @@ export function startMcpServer(): void {
 
     // Handle tools/call asynchronously
     if (method === 'tools/call') {
-      const result = await handleToolCall();
-      const resp = { jsonrpc: '2.0', id: req.id, result };
-      process.stdout.write(JSON.stringify(resp) + '\n');
+      pending++;
+      try {
+        const params = (req.params ?? {}) as Record<string, unknown>;
+        const toolName = params.name as string;
+        const result = await handleToolCall(toolName);
+        const resp = { jsonrpc: '2.0', id: req.id, result };
+        process.stdout.write(JSON.stringify(resp) + '\n');
+      } finally {
+        pending--;
+        maybeExit();
+      }
       return;
     }
 
@@ -166,6 +259,7 @@ export function startMcpServer(): void {
   });
 
   rl.on('close', () => {
-    process.exit(0);
+    stdinClosed = true;
+    maybeExit();
   });
 }

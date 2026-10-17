@@ -149,3 +149,125 @@ export async function execCtx(cmd: string, args: string[]): Promise<number> {
     });
   });
 }
+
+/**
+ * Result of a captured subprocess execution.
+ * Used by MCP tools that need to inspect script output programmatically
+ * rather than streaming it to the terminal.
+ */
+export interface CapturedResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+}
+
+/*
+ * ── execCtxCaptured: captured execution for the MCP tool boundary ──────────
+ *
+ * POR QUÉ NO REUSA execCtx (future-fusion guard — este comentario previene
+ * la regresión de un "refactor de limpieza" que unifique ambas funciones):
+ *
+ * 1. stdio: 'inherit'  vs  stdio: 'pipe'
+ *    execCtx usa stdio: 'inherit' — la salida del script fluye DIRECTAMENTE al
+ *    terminal del proceso padre. Para herramientas MCP necesitamos CAPTURAR
+ *    stdout/stderr para devolverlos como contenido de la tool (el protocolo
+ *    MCP responde con el output, no lo escribe al terminal del agente).
+ *    Con 'inherit' no podríamos leer la salida en JavaScript. Cambiar execCtx
+ *    a 'pipe' rompería la pass-through verificada por ctx-env.test.ts
+ *    (stdout del script fluye sin mediación → Ajuste 3b del operador).
+ *    Son contratos de I/O fundamentalmente distintos; no es un "modo extra".
+ *
+ * 2. Signal forwarding  vs  no signal forwarding
+ *    execCtx instala listeners SIGINT/SIGTERM que propagan la señal al grupo
+ *    de procesos del hijo y luego llaman process.exit(). Correcto para la CLI
+ *    interactiva: Ctrl+C debe terminar el script y su salida. Pero en el
+ *    canal MCP, el ciclo de vida del server lo gestiona el proceso padre (el
+ *    agente/herramienta que habla JSON-RPC por stdio). Si execCtxCaptured
+ *    reenviara señales y llamara process.exit(), moriría al server MCP entero,
+ *    no solo al subprocess. El forward de señales es un leak de capa CLI → MCP.
+ *
+ * 3. Timeout
+ *    execCtx no impone límite de tiempo. Para la CLI es aceptable — el usuario
+ *    espera o interrumpe manualmente. Pero una tool MCP bloqueada indefinidamente
+ *    (ej. buffy-verify.sh haciendo network lento, o un hang en facts_engine)
+ *    colgaría al agente llamador sin recovery. MCP implica bounded execution;
+ *    30s es el default razonado en el planning (ver D1-MCP-003).
+ *
+ * 4. Tipo de retorno
+ *    execCtx devuelve Promise<number> (solo exit code). execCtxCaptured devuelve
+ *    Promise<CapturedResult> con {code, stdout, stderr, timedOut}. La estructura
+ *    es incompatible — un caller de MCP no necesita ni señales ni exit-code-only.
+ *
+ * Si en el futuro execCtx evoluciona para soportar captura + timeout, usar un
+ * flag EXPLÍCITO (ej. { capture: true, timeoutMs }) — NUNCA heredar el
+ * signal-forwarding + process.exit de la CLI en el canal MCP.
+ */
+export async function execCtxCaptured(
+  cmd: string,
+  args: string[],
+  timeoutMs: number = 30000,
+): Promise<CapturedResult> {
+  const script = resolveScriptPath(cmd);
+  if (!script) {
+    return {
+      code: 1,
+      stdout: '',
+      stderr: `ctx: nombre de comando inválido: "${cmd}"`,
+      timedOut: false,
+    };
+  }
+  if (!existsSync(script)) {
+    return {
+      code: 1,
+      stdout: '',
+      stderr:
+        `ctx: script no encontrado: ${script}\n` +
+        '¿Está clonado buffy-context en la ruta esperada? Diagnóstico: buffy env',
+      timedOut: false,
+    };
+  }
+
+  return new Promise((resolve) => {
+    const child = spawn('bash', [script, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'], // stdin:ignore, stdout/stderr: capturados
+      cwd: resolveContextRepo(),
+      // NOT detached: MCP server owns the process tree; no signal forwarding.
+      // (Ver comentario expositivo arriba — este es el boundary CLI → MCP.)
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+
+    child.stdout?.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+    child.stderr?.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    child.on('error', (err) => {
+      resolve({
+        code: 1,
+        stdout,
+        stderr: stderr + `ctx: fallo al ejecutar ${script}: ${err.message}`,
+        timedOut: false,
+      });
+    });
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        child.kill('SIGKILL'); // SIGKILL: no graceful fallback on timeout
+      } catch {
+        /* already dead */
+      }
+    }, timeoutMs);
+
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      resolve({ code: code ?? 1, stdout, stderr, timedOut });
+    });
+  });
+}
