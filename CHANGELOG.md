@@ -4,6 +4,36 @@ All notable changes to Buffy Next will be documented in this file.
 
 ## [Unreleased]
 
+### Added — MVP buffy_verify MCP tool (2026-10-17)
+
+- **`buffy_verify`** — segunda tool MCP read-only. Verificación factual de `ai-context/INFO-core.md` contra el sistema real. Retorna JSON con `{repo, verified, stale, unknown, expired, trust_score, items, _info}`. Schema: `{type: "object", properties: {}, additionalProperties: false}`. Annotations: `readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false`.
+- **`src/shared/ctx.ts`** — `execCtxCaptured()`: ejecución de subprocess con captura de stdout/stderr (`stdio: pipe`), timeout 30s con SIGKILL, sin signal-forwarding ni `process.exit()`. Diseñado específicamente para el boundary CLI → MCP — NO reusa `execCtx` (que usa `inherit + signal-forwarding + process.exit` para CLI interactiva).
+- **`src/mcp.ts`** — registro de `BUFFY_VERIFY_TOOL` en `tools/list` y `tools/call` dispatch; `handleToolCall(toolName)` exportado para routing buffy_verify vs buffy_context; `BUFFY_MCP_INSTRUCTIONS` actualizadas documentando ambas tools y su propósito distintivo.
+- **Fix `startMcpServer` async-exit**: `pending` counter + `maybeExit()` asegura que las respuestas de `tools/call` se envíen antes de `process.exit(0)` al cerrar stdin. Sin el fix, `printf '...' | buffy serve --mcp` perdía la última respuesta (stdin EOF disparaba `process.exit` antes de que el handler async resolviera).
+- **`tests/mcp-verify.test.ts`** (7 tests) — schema/annotations, tools/list anuncia ambas tools, JSON output con 8 keys requeridas, separación stderr/stdout.
+- **`tests/mcp-fusion-guard.test.ts`** (3 tests) — vi.mock spy en `execCtxCaptured` verifica llamado con `("verify", ["--json"])`; assert `execCtx` NUNCA llamado; structural guard vía regex `\bexecCtx\b` (word boundary: matcha `execCtx` pero NO `execCtxCaptured`).
+
+#### Validación funcional (2026-10-17)
+
+- **Suite completa**: 689/689 tests, 44 archivos, 0 fallos (680 preexistentes + 10 nuevos).
+- **Handshake MCP** (global `buffy --mcp`): initialize + tools/list + tools/call → exit 0, 3 respuestas JSON-RPC, IDs 1/2/3.
+- **Handshake MCP** (pipe + EOF): `printf '...' | buffy serve --mcp` → exit 0, 3 lines, 3 responses.
+- **Handshake MCP** (stdin abierto entre mensajes): respuestas incrementales, server no se cierra prematuramente → exit 0, 3 responses.
+- **Paridad output**: `buffy_verify` retorna `verified=14, stale=5, trust_score=73.7` — idéntico a `buffy ctx verify --json`. Mismos 8 keys.
+- **CI remoto**: `gh run` sobre `e322dbc` → `conclusion: success, status: completed`.
+
+#### Pendiente (no bloqueante)
+
+- **Cursor E2E (D5)**: Cursor no instalado en este entorno (terminal-only). Validado vía AGY (Gemini CLI) como cliente MCP real — config equivalente (`command: buffy, args: [serve, --mcp]`) registrada en `~/.gemini/config/mcp_config.json`.
+- **Compatibilidad con otros clientes MCP** (Cline, Continue, Claude Desktop): asumido por estándar de protocolo, no verificado por prueba.
+
+#### Alcance no cubierto por el MVP
+
+- **`buffy_search` como tool MCP**: diferido. `buffy-search.sh` no implementa `--json` (devuelve texto grep-style); exponerlo requiere contrato estructurado que no existe hoy.
+- **Rama `feat/mcp-integration`**: no fusionada. `master` siguió su propio camino con `ctx delegator` (PR5). La rama se conserva como referencia histórica.
+
+#### [verificado 2026-10-17] — scope: `src/shared/ctx.ts`, `src/mcp.ts`, `tests/mcp-verify.test.ts`, `tests/mcp-fusion-guard.test.ts`
+
 ### Added — PR5: `buffy ctx` (delegador a Context) + `buffy env` (topología) (2026-09-27)
 
 - **`buffy ctx <comando> [args]`** — delegación por subprocess a scripts de Buffy Context (`buffy-context/scripts/buffy-<cmd>.sh`). Pass-through estricto: args **verbatim** (flags incluidos — el tail se toma de argv crudo, no de stripFlags: los flags posteriores a `ctx <cmd>` son del script), streams sin mediación (`stdio: inherit`), exit code del script preservado (no colapsado). Sin args: lista comandos descubiertos, **exit 0**. Discovery por filesystem — Next no conoce la lista de subcomandos de Context (puede crecer sin tocar Next). Validación de nombre `[a-z0-9-]+` antes de interpolar en ruta (bloquea traversal). CWD = repo root de Context (convención de sus scripts). Errores nombran la capa y apuntan a `buffy env`.
