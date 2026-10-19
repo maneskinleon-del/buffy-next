@@ -1,5 +1,5 @@
 // Buffy Next — MCP Server (stdio transport)
-// Pattern: initialize.instructions + read-only tools (buffy_context, buffy_verify)
+// Pattern: initialize.instructions + read-only tools (buffy_context, buffy_verify, buffy_continuity)
 // Inspired by CodeGraph local mechanism (2026-09-14)
 
 import { createInterface } from 'node:readline';
@@ -24,7 +24,7 @@ platform, hardware, available tools, privileges, running processes. Every
 field carries freshness — observed | inferred | stale | unknown — do not
 treat stale or unknown fields as current fact.
 
-There are TWO read-only MCP tools:
+There are THREE read-only MCP tools:
 
   buffy_context  — LIVE environment state: platform, hardware (CPU/RAM/GPU/
     storage/temperature), available tools, privileges, running processes.
@@ -36,9 +36,14 @@ There are TWO read-only MCP tools:
     JSON with verified/stale/unknown/expired counts and trust_score.
     NOT for observing live environment state — use buffy_context for that.
 
-Both tools are read-only and non-destructive. buffy_context is for current
-runtime state; buffy_verify is for knowledge correctness. Choose the right
-tool for the question.
+  buffy_continuity — SESSION handoff: reads ai-context/CONTINUE.md from the
+    Context repo and returns structured JSON with last_checkpoint, summary,
+    pending items, and stack. NOT for live system state — use buffy_context.
+    NOT for fact-checking — use buffy_verify.
+
+All tools are read-only and non-destructive. buffy_context is for current
+runtime state; buffy_verify is for knowledge correctness; buffy_continuity
+is for session handoff. Choose the right tool for the question.
 
 Never for: codebase exploration, general reasoning, or persistent project
 memory.
@@ -92,6 +97,25 @@ export const BUFFY_VERIFY_TOOL = {
   },
 };
 
+export const BUFFY_CONTINUITY_TOOL = {
+  name: 'buffy_continuity',
+  description:
+    'Session handoff: reads ai-context/CONTINUE.md from the Context repo and ' +
+    'returns structured JSON with last_checkpoint, summary, pending items, and ' +
+    'stack. Read-only. NOT for live environment state — use buffy_context for that.',
+  inputSchema: {
+    type: 'object' as const,
+    properties: {},
+    additionalProperties: false,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
+};
+
 // ─── MCP JSON-RPC handler ────────────────────────────────────
 
 function handleRequest(req: Record<string, unknown>): Record<string, unknown> | null {
@@ -119,7 +143,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
     return {
       jsonrpc: '2.0',
       id,
-      result: { tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL] },
+      result: { tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL] },
     };
   }
 
@@ -127,7 +151,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
     const params = (req.params ?? {}) as Record<string, unknown>;
     const toolName = params.name as string;
 
-    if (toolName !== 'buffy_context' && toolName !== 'buffy_verify') {
+    if (toolName !== 'buffy_context' && toolName !== 'buffy_verify' && toolName !== 'buffy_continuity') {
       return {
         jsonrpc: '2.0',
         id,
@@ -181,6 +205,40 @@ export async function handleToolCall(toolName: string): Promise<Record<string, u
 
       // buffy-verify.sh --json produces JSON on stdout (even on non-zero exit
       // for error items). Return the raw JSON — the MCP client parses it.
+      return {
+        content: [{ type: 'text', text: result.stdout }],
+      };
+    }
+
+    if (toolName === 'buffy_continuity') {
+      const result = await execCtxCaptured('continuity', ['--json']);
+
+      if (result.timedOut) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `buffy_continuity: timed out after 30s. stdout parcial: ${result.stdout}\\nstderr: ${result.stderr}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      if (!result.stdout) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${result.stderr || `buffy_continuity falló con código ${result.code}`}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // buffy-continuity.sh --json produces JSON on stdout.
+      // Return the raw JSON — the MCP client parses it.
       return {
         content: [{ type: 'text', text: result.stdout }],
       };
