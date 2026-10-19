@@ -37,8 +37,8 @@ There are THREE read-only MCP tools:
     NOT for observing live environment state — use buffy_context for that.
 
   buffy_continuity — SESSION handoff: reads ai-context/CONTINUE.md from the
-    Context repo and returns structured JSON with last_checkpoint, summary,
-    pending items, and stack. NOT for live system state — use buffy_context.
+    Context repo and returns the raw file content as JSON (no parsing,
+    no section extraction). NOT for live system state — use buffy_context.
     NOT for fact-checking — use buffy_verify.
 
 All tools are read-only and non-destructive. buffy_context is for current
@@ -101,8 +101,8 @@ export const BUFFY_CONTINUITY_TOOL = {
   name: 'buffy_continuity',
   description:
     'Session handoff: reads ai-context/CONTINUE.md from the Context repo and ' +
-    'returns structured JSON with last_checkpoint, summary, pending items, and ' +
-    'stack. Read-only. NOT for live environment state — use buffy_context for that.',
+    'returns the raw file content as JSON (no parsing, no section ' +
+    'extraction). Read-only. NOT for live environment state — use buffy_context for that.',
   inputSchema: {
     type: 'object' as const,
     properties: {},

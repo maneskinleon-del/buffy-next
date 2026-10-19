@@ -30,7 +30,15 @@ describe('FUSION GUARD — buffy_continuity handler boundary', () => {
   it('usa execCtxCaptured (spy): se llama con ("continuity", ["--json"])', async () => {
     vi.mocked(execCtxCaptured).mockResolvedValue({
       code: 0,
-      stdout: '{"repo":"test","source_file":"ai-context/CONTINUE.md","last_checkpoint":"## CHECKPOINT (test)","last_inline_checkpoint":null,"summary":"test","pending":[],"stack":"test","_info":"test"}',
+      stdout: JSON.stringify({
+        source: 'repo',
+        path: '/repo/ai-context/CONTINUE.md',
+        exists: true,
+        readable: true,
+        size_bytes: 1428,
+        line_count: 9,
+        content: '## CHECKPOINT (test) — GameBoost Pro\n\nraw content preserved\n',
+      }),
       stderr: '',
       timedOut: false,
     });
@@ -43,14 +51,22 @@ describe('FUSION GUARD — buffy_continuity handler boundary', () => {
 
     expect(result.content).toBeDefined();
     expect(result.content[0].type).toBe('text');
-    expect(result.content[0].text).toContain('"_info"');
+    expect(result.content[0].text).toContain('"content"');
     expect(result.isError).toBeUndefined();
   });
 
   it('NO usa execCtx: execCtx nunca se llama desde el handler de buffy_continuity', async () => {
     vi.mocked(execCtxCaptured).mockResolvedValue({
       code: 0,
-      stdout: '{"repo":"test","source_file":"ai-context/CONTINUE.md","last_checkpoint":null,"last_inline_checkpoint":null,"summary":"","pending":[],"stack":"","_info":"test"}',
+      stdout: JSON.stringify({
+        source: 'repo',
+        path: '/repo/ai-context/CONTINUE.md',
+        exists: true,
+        readable: true,
+        size_bytes: 0,
+        line_count: 1,
+        content: '',
+      }),
       stderr: '',
       timedOut: false,
     });
@@ -58,7 +74,7 @@ describe('FUSION GUARD — buffy_continuity handler boundary', () => {
 
     await handleToolCall('buffy_continuity');
 
-    // FUSION GUARD: execCtx (el de la CLI interactiva) NO debe ser llamado
+    // FUSION GUARD: execCtx (el de la CLI interactativa) NO debe ser llamado
     expect(execCtx).not.toHaveBeenCalled();
   });
 

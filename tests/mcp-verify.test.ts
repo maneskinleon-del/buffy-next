@@ -185,17 +185,16 @@ beforeAll(() => {
     continuityScript,
     [
       '#!/usr/bin/env bash',
-      '# Mock buffy-continuity.sh — produce JSON estructurado',
+      '# Mock buffy-continuity.sh — produce JSON con content raw',
       'cat <<JSONEOF',
       JSON.stringify({
-        repo: continuityFixtureRepo,
-        source_file: 'ai-context/CONTINUE.md',
-        last_checkpoint: '## CHECKPOINT (2026-10-15) — GameBoost Pro',
-        last_inline_checkpoint: '[CHECKPOINT 2026-10-17 — Retiro de kimi_vision]',
-        summary: 'Trabajo: buffy_continuity MCP tool MVP',
-        pending: ['Revisar Cursor E2E', 'Documentar caveat AGY'],
-        stack: 'Buffy Next (MVP buffy_verify) → buffy_context → buffy_continuity',
-        _info: 'continuidad operativa — handoff entre sesiones (instancia local)',
+        source: 'repo',
+        path: continuityFixtureRepo + '/ai-context/CONTINUE.md',
+        exists: true,
+        readable: true,
+        size_bytes: 42,
+        line_count: 1,
+        content: '# CONTINUE.md — raw content preserved\n',
       }),
       'JSONEOF',
     ].join('\n') + '\n',
@@ -208,7 +207,7 @@ afterAll(() => {
 });
 
 describe('MCP buffy_continuity — JSON output', () => {
-  it('devuelve JSON parseable con keys {repo, source_file, last_checkpoint, last_inline_checkpoint, summary, pending, stack, _info}', async () => {
+  it('devuelve JSON parseable con keys {source, path, exists, readable, size_bytes, line_count, content}', async () => {
     const prevRepo = process.env.BUFFY_CONTEXT_REPO;
     process.env.BUFFY_CONTEXT_REPO = continuityFixtureRepo;
 
@@ -221,25 +220,21 @@ describe('MCP buffy_continuity — JSON output', () => {
 
       const data = JSON.parse(result.stdout);
 
-      expect(data).toHaveProperty('repo');
-      expect(data).toHaveProperty('source_file');
-      expect(data).toHaveProperty('last_checkpoint');
-      expect(data).toHaveProperty('last_inline_checkpoint');
-      expect(data).toHaveProperty('summary');
-      expect(data).toHaveProperty('pending');
-      expect(data).toHaveProperty('stack');
-      expect(data).toHaveProperty('_info');
+      expect(data).toHaveProperty('source');
+      expect(data).toHaveProperty('path');
+      expect(data).toHaveProperty('exists');
+      expect(data).toHaveProperty('readable');
+      expect(data).toHaveProperty('size_bytes');
+      expect(data).toHaveProperty('line_count');
+      expect(data).toHaveProperty('content');
 
       // Tipos y valores
-      expect(data.repo).toBe(continuityFixtureRepo);
-      expect(data.source_file).toBe('ai-context/CONTINUE.md');
-      expect(data.last_checkpoint).toBe('## CHECKPOINT (2026-10-15) — GameBoost Pro');
-      expect(data.last_inline_checkpoint).toBe('[CHECKPOINT 2026-10-17 — Retiro de kimi_vision]');
-      expect(data.summary).toContain('buffy_continuity');
-      expect(Array.isArray(data.pending)).toBe(true);
-      expect(data.pending).toHaveLength(2);
-      expect(data.stack).toContain('buffy_context');
-      expect(data._info).toContain('continuidad operativa');
+      expect(data.source).toBe('repo');
+      expect(data.exists).toBe(true);
+      expect(data.readable).toBe(true);
+      expect(typeof data.size_bytes).toBe('number');
+      expect(typeof data.line_count).toBe('number');
+      expect(data.content).toContain('raw content');
     } finally {
       if (prevRepo === undefined) delete process.env.BUFFY_CONTEXT_REPO;
       else process.env.BUFFY_CONTEXT_REPO = prevRepo;
