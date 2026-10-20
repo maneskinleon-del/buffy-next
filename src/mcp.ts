@@ -24,7 +24,7 @@ platform, hardware, available tools, privileges, running processes. Every
 field carries freshness — observed | inferred | stale | unknown — do not
 treat stale or unknown fields as current fact.
 
-There are THREE read-only MCP tools:
+There are FOUR read-only MCP tools:
 
   buffy_context  — LIVE environment state: platform, hardware (CPU/RAM/GPU/
     storage/temperature), available tools, privileges, running processes.
@@ -41,9 +41,14 @@ There are THREE read-only MCP tools:
     no section extraction). NOT for live system state — use buffy_context.
     NOT for fact-checking — use buffy_verify.
 
+  buffy_search — Full-text search (FTS5) over buffy-context: Knowledge/,
+    ai-context/, CHANGELOG, SESION. Returns {path, lineno, snippet} per match.
+    Use for finding references, not for state.
+
 All tools are read-only and non-destructive. buffy_context is for current
 runtime state; buffy_verify is for knowledge correctness; buffy_continuity
-is for session handoff. Choose the right tool for the question.
+is for session handoff; buffy_search is for finding references via FTS5.
+Choose the right tool for the question.
 
 Never for: codebase exploration, general reasoning, or persistent project
 memory.
@@ -116,6 +121,31 @@ export const BUFFY_CONTINUITY_TOOL = {
   },
 };
 
+export const BUFFY_SEARCH_TOOL = {
+  name: 'buffy_search',
+  description:
+    'Full-text search (FTS5) over buffy-context: Knowledge/, ai-context/, ' +
+    'CHANGELOG, SESION. Returns ranked matches with {path, lineno, snippet}. ' +
+    'Read-only. Use for finding references, not for state.',
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      query: {
+        type: 'string' as const,
+        description: 'FTS5 query string (e.g. "ADB", "shizuku rish")',
+      },
+    },
+    required: ['query'],
+    additionalProperties: false,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  },
+};
+
 // ─── MCP JSON-RPC handler ────────────────────────────────────
 
 function handleRequest(req: Record<string, unknown>): Record<string, unknown> | null {
@@ -143,7 +173,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
     return {
       jsonrpc: '2.0',
       id,
-      result: { tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL] },
+      result: { tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL, BUFFY_SEARCH_TOOL] },
     };
   }
 
@@ -151,7 +181,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
     const params = (req.params ?? {}) as Record<string, unknown>;
     const toolName = params.name as string;
 
-    if (toolName !== 'buffy_context' && toolName !== 'buffy_verify' && toolName !== 'buffy_continuity') {
+    if (toolName !== 'buffy_context' && toolName !== 'buffy_verify' && toolName !== 'buffy_continuity' && toolName !== 'buffy_search') {
       return {
         jsonrpc: '2.0',
         id,
@@ -174,7 +204,7 @@ function handleRequest(req: Record<string, unknown>): Record<string, unknown> | 
   };
 }
 
-export async function handleToolCall(toolName: string): Promise<Record<string, unknown>> {
+export async function handleToolCall(toolName: string, params?: Record<string, unknown>): Promise<Record<string, unknown>> {
   try {
     if (toolName === 'buffy_verify') {
       const result = await execCtxCaptured('verify', ['--json']);
@@ -244,6 +274,43 @@ export async function handleToolCall(toolName: string): Promise<Record<string, u
       };
     }
 
+    if (toolName === 'buffy_search') {
+      const query = (params?.arguments as { query?: string })?.query;
+      if (!query || query.trim() === '') {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'empty_query',
+                message: 'query parameter is required',
+                results: [],
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+      const result = await execCtxCaptured('search', ['--json', query]);
+      if (result.timedOut) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `buffy_search: timed out after 30s. stdout parcial: ${result.stdout}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      // El script emite JSON en stdout (incluso en error). El handler
+      // NO reescribe — pasa el JSON tal cual y marca isError si exit != 0.
+      return {
+        content: [{ type: 'text', text: result.stdout || result.stderr }],
+        isError: result.code !== 0,
+      };
+    }
+
     // Default: buffy_context (live environment state)
     const adapter = await createAdapter();
     const report = await runDoctor(adapter);
@@ -299,7 +366,7 @@ export function startMcpServer(): void {
       try {
         const params = (req.params ?? {}) as Record<string, unknown>;
         const toolName = params.name as string;
-        const result = await handleToolCall(toolName);
+        const result = await handleToolCall(toolName, params);
         const resp = { jsonrpc: '2.0', id: req.id, result };
         process.stdout.write(JSON.stringify(resp) + '\n');
       } finally {
