@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync, rmSync, chmodSync, readFileSync } from 'node:
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL } from '../src/mcp.js';
+import { BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL, BUFFY_SEARCH_TOOL } from '../src/mcp.js';
 import { execCtxCaptured } from '../src/shared/ctx.js';
 
 // ─── Fixture repo con mock buffy-verify.sh ────────────────────
@@ -76,19 +76,20 @@ describe('MCP buffy_verify — schema and annotations', () => {
   });
 });
 
-// ─── 2. tools/list announces all three tools ─────────────────────
+// ─── 2. tools/list announces all four tools ─────────────────────
 
 describe('MCP tools/list', () => {
-  it('exporta buffy_context, buffy_verify Y buffy_continuity con names correctos', () => {
+  it('exporta buffy_context, buffy_verify, buffy_continuity Y buffy_search con names correctos', () => {
     expect(BUFFY_CONTEXT_TOOL.name).toBe('buffy_context');
     expect(BUFFY_VERIFY_TOOL.name).toBe('buffy_verify');
     expect(BUFFY_CONTINUITY_TOOL.name).toBe('buffy_continuity');
+    expect(BUFFY_SEARCH_TOOL.name).toBe('buffy_search');
   });
 
-  it('handler de tools/list incluye las 3 tools', () => {
+  it('handler de tools/list incluye las 4 tools', () => {
     const src = readFileSync(new URL('../src/mcp.ts', import.meta.url), 'utf-8');
     expect(src).toContain(
-      'tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL]',
+      'tools: [BUFFY_CONTEXT_TOOL, BUFFY_VERIFY_TOOL, BUFFY_CONTINUITY_TOOL, BUFFY_SEARCH_TOOL]',
     );
   });
 });
