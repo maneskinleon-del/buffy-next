@@ -17,6 +17,7 @@ import {
   closeSync,
   fsyncSync,
   renameSync,
+  linkSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -224,9 +225,11 @@ export function claimInflight(actionId: string, target: string, platform: string
     startedAt: new Date().toISOString(),
   };
   
+  const tmpPath = join(inflightDir, `.tmp-${fingerprint}-${process.pid}-${randomBytes(4).toString('hex')}`);
+  
   try {
-    // Try to create the final claim file exclusively
-    const fd = openSync(claimPath, 'wx');
+    // Create temporary file exclusively
+    const fd = openSync(tmpPath, 'wx');
     try {
       const content = JSON.stringify(claim, null, 2) + '\n';
       const buf = Buffer.from(content, 'utf-8');
@@ -235,9 +238,26 @@ export function claimInflight(actionId: string, target: string, platform: string
     } finally {
       closeSync(fd);
     }
+    
+    // Publish via linkSync (doesn't replace existing)
+    try {
+      linkSync(tmpPath, claimPath);
+    } catch (e: any) {
+      try { if (existsSync(tmpPath)) unlinkSync(tmpPath); } catch {}
+      if (e.code === 'EEXIST') {
+        return { claimed: false, fingerprint, claimPath, reason: 'claim_exists' };
+      }
+      throw e;
+    }
+    
+    // Remove temporary
+    try { unlinkSync(tmpPath); } catch {}
     fsyncDir(inflightDir);
     return { claimed: true, fingerprint, claimPath };
   } catch (e: any) {
+    try {
+      if (existsSync(tmpPath)) unlinkSync(tmpPath);
+    } catch {}
     if (e.code === 'EEXIST') {
       return { claimed: false, fingerprint, claimPath, reason: 'claim_exists' };
     }
@@ -339,35 +359,51 @@ export function readJournal(): JournalEntry[] {
 export function reconcileClaim(fingerprint: string, expected?: { executionId?: string; requestId?: string }): { reconciled: boolean; hadEntry: boolean } {
   const journal = readJournal();
   const claim = readInflight(fingerprint);
+  if (!claim) {
+    return { reconciled: false, hadEntry: false };
+  }
   // Require correlation - do not release based solely on old entries with same fingerprint
   const execId = expected?.executionId || claim?.executionId;
   const reqId = expected?.requestId || claim?.requestId;
   
   if (!execId && !reqId) {
-    // No correlation info - extremely conservative, do not auto-release
-    if (claim && isProcessAlive(claim.pid)) {
+    if (isProcessAlive(claim.pid)) {
       return { reconciled: false, hadEntry: false };
     }
-    // Even if process dead, without correlation we cannot safely reconcile a new claim
     return { reconciled: false, hadEntry: false };
   }
   
-  // Look for exact match by executionId or requestId
-  const hasExactMatch = journal.some(e => 
-    e.type === 'execution' && 
-    ((execId && e.executionId === execId) || (reqId && e.requestId === reqId))
-  );
+  // Look for match - if both exist, both must match in same record
+  let hasExactMatch = false;
+  if (execId && reqId) {
+    hasExactMatch = journal.some(e => 
+      e.type === 'execution' && 
+      e.executionId === execId && 
+      e.requestId === reqId
+    );
+  } else if (execId) {
+    hasExactMatch = journal.some(e => 
+      e.type === 'execution' && 
+      e.executionId === execId
+    );
+  } else if (reqId) {
+    hasExactMatch = journal.some(e => 
+      e.type === 'execution' && 
+      e.requestId === reqId
+    );
+  }
   
   if (hasExactMatch) {
     const released = releaseInflight(fingerprint);
+    if (!released) {
+      return { reconciled: false, hadEntry: true };
+    }
     return { reconciled: true, hadEntry: true };
   }
   
-  // No exact match for this specific execution/request
-  if (claim && isProcessAlive(claim.pid)) {
+  if (isProcessAlive(claim.pid)) {
     return { reconciled: false, hadEntry: false };
   }
-  // Process dead but no matching entry for this specific correlation - do not auto-release
   return { reconciled: false, hadEntry: false };
 }
 
