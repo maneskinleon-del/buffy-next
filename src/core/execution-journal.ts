@@ -362,9 +362,22 @@ export function reconcileClaim(fingerprint: string, expected?: { executionId?: s
   if (!claim) {
     return { reconciled: false, hadEntry: false };
   }
-  // Require correlation - do not release based solely on old entries with same fingerprint
-  const execId = expected?.executionId || claim?.executionId;
-  const reqId = expected?.requestId || claim?.requestId;
+  // Only use identity from the claim we read (source of truth)
+  const claimExecId = claim.executionId;
+  const claimReqId = claim.requestId;
+  
+  // If expected provided, it must match claim identity
+  if (expected) {
+    if (expected.executionId !== undefined && expected.executionId !== claimExecId) {
+      return { reconciled: false, hadEntry: false };
+    }
+    if (expected.requestId !== undefined && expected.requestId !== claimReqId) {
+      return { reconciled: false, hadEntry: false };
+    }
+  }
+  
+  const execId = claimExecId;
+  const reqId = claimReqId;
   
   if (!execId && !reqId) {
     if (isProcessAlive(claim.pid)) {
@@ -394,6 +407,14 @@ export function reconcileClaim(fingerprint: string, expected?: { executionId?: s
   }
   
   if (hasExactMatch) {
+    // Re-read claim to avoid releasing a different claim if replaced
+    const claimAgain = readInflight(fingerprint);
+    if (!claimAgain) {
+      return { reconciled: false, hadEntry: true };
+    }
+    if (claimAgain.executionId !== claimExecId || claimAgain.requestId !== claimReqId || claimAgain.pid !== claim.pid) {
+      return { reconciled: false, hadEntry: true };
+    }
     const released = releaseInflight(fingerprint);
     if (!released) {
       return { reconciled: false, hadEntry: true };

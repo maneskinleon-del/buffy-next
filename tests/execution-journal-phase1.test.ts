@@ -16,10 +16,6 @@ beforeEach(() => {
 
 afterEach(() => {
   try {
-    // Verificar que no se escribió fuera del directorio temporal
-    const home = require('os').homedir();
-    const realBuffy = join(home, '.buffy');
-    // No verificamos estrictamente para no fallar por estado previo, pero aseguramos limpieza
     if (testDir) {
       rmSync(testDir, { recursive: true, force: true });
     }
