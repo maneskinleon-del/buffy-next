@@ -1,5 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { PlatformAdapter, ActionDefinition, ActionResult, Capability, ActionExecutor } from '../src/core/types.js';
+
+let testDirPipeline: string;
+
+beforeEach(() => {
+  testDirPipeline = mkdtempSync(join(tmpdir(), 'buffy-pipe-'));
+  process.env.BUFFY_DIR = testDirPipeline;
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  try {
+    if (testDirPipeline) {
+      rmSync(testDirPipeline, { recursive: true, force: true });
+    }
+  } catch {}
+  delete process.env.BUFFY_DIR;
+});
 
 // Mock modules before importing pipeline
 vi.mock('../src/state/store.js', () => ({

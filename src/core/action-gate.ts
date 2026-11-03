@@ -32,6 +32,8 @@ import { AuthorizationStore } from './authorization-store.js';
 import { ActionExecutionStore } from './action-execution-store.js';
 import { ActionPlanner } from './action-planner.js';
 import { ExecutorRegistry } from './executor-registry.js';
+import { claimInflight, appendToJournal, releaseInflight, getFingerprint, reconcileClaim } from './execution-journal.js';
+import { hostname } from 'node:os';
 
 // ─── Action Gate ───────────────────────────────────────────
 
@@ -162,6 +164,21 @@ export class ActionGate {
     const executionTokenId = token?.tokenId ?? 'auto-safe';
     const execRecord = this.execStore.start(executionTokenId, actionId);
 
+    // ── 9.5. Claim inflight (Execution Journal Fase 1) ──
+    const claim = claimInflight(actionId, request.target, request.platform, {
+      requestId: request.requestId,
+      executionId: execRecord.executionId,
+    });
+    if (!claim.claimed) {
+      const failResult: ActionResult = {
+        success: false,
+        message: `Operación ya en curso o pendiente: ${action.name} (${claim.reason || 'claim_exists'})`,
+      };
+      this.execStore.fail(execRecord.executionId, failResult);
+      if (token) this.authStore.consume(token.tokenId);
+      return failResult;
+    }
+
     // ── 10. Execute via private executor ───────────────
     const executor = this.registry.get(actionId);
     if (!executor) {
@@ -171,6 +188,24 @@ export class ActionGate {
       };
       this.execStore.fail(execRecord.executionId, failResult);
       if (token) this.authStore.consume(token.tokenId);
+      // Record in journal before releasing claim
+      const journalWritten = appendToJournal({
+        type: 'execution',
+        fingerprint: claim.fingerprint,
+        actionId,
+        target: request.target,
+        platform: request.platform,
+        requestId: request.requestId,
+        executionId: execRecord.executionId,
+        timestamp: new Date().toISOString(),
+        pid: process.pid,
+        hostname: hostname(),
+        status: 'failed',
+        message: failResult.message,
+      });
+      if (journalWritten) {
+        releaseInflight(claim.fingerprint);
+      }
       return failResult;
     }
 
@@ -184,6 +219,25 @@ export class ActionGate {
       };
       this.execStore.fail(execRecord.executionId, result);
       if (token) this.authStore.consume(token.tokenId);
+      // Append to journal before releasing claim - DO NOT release if journal write fails
+      const journalWritten = appendToJournal({
+        type: 'execution',
+        fingerprint: claim.fingerprint,
+        actionId,
+        target: request.target,
+        platform: request.platform,
+        requestId: request.requestId,
+        executionId: execRecord.executionId,
+        timestamp: new Date().toISOString(),
+        pid: process.pid,
+        hostname: hostname(),
+        status: 'failed',
+        message: result.message,
+      });
+      if (journalWritten) {
+        releaseInflight(claim.fingerprint);
+      }
+      // If journal write failed, keep claim for recovery
       return result;
     }
 
@@ -194,6 +248,26 @@ export class ActionGate {
 
     // ── 12. Record completion ──────────────────────────
     this.execStore.complete(execRecord.executionId, result);
+
+    // Append to journal before releasing claim - DO NOT release if journal write fails
+    const journalWritten = appendToJournal({
+      type: 'execution',
+      fingerprint: claim.fingerprint,
+      actionId,
+      target: request.target,
+      platform: request.platform,
+      requestId: request.requestId,
+      executionId: execRecord.executionId,
+      timestamp: new Date().toISOString(),
+      pid: process.pid,
+      hostname: hostname(),
+      status: result.success ? 'success' : 'failed',
+      message: result.message,
+    });
+    if (journalWritten) {
+      releaseInflight(claim.fingerprint);
+    }
+    // If journal write failed, keep claim for recovery
 
     return result;
   }
