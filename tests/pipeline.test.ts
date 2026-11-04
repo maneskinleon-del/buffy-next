@@ -1,5 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { PlatformAdapter, ActionDefinition, ActionResult, Capability, ActionExecutor } from '../src/core/types.js';
+
+let testDirPipeline: string;
+
+beforeEach(() => {
+  testDirPipeline = mkdtempSync(join(tmpdir(), 'buffy-pipe-'));
+  process.env.BUFFY_DIR = testDirPipeline;
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  try {
+    if (testDirPipeline) {
+      rmSync(testDirPipeline, { recursive: true, force: true });
+    }
+  } catch {}
+  delete process.env.BUFFY_DIR;
+});
 
 // Mock modules before importing pipeline
 vi.mock('../src/state/store.js', () => ({
@@ -102,6 +122,34 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
   });
 
   // --- Gate 1: Forbidden ---
+
+  it('a failing state write after a successful effect never reports the action as not executed', async () => {
+    const adapter = createMockAdapter();
+    vi.mocked(updateState).mockImplementationOnce(() => {
+      throw new Error('No se pudo adquirir lock para actualizar state.json');
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await executeWithGatesForTests({
+      adapter,
+      action: autoSafeAction,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
+
+    // El efecto ya ocurrió: el resultado refleja la ejecución, no el fallo de persistencia.
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('auto executed');
+    // Y el fallo no es silencioso.
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('efecto ejecutado pero el historial no pudo persistirse'),
+      expect.anything(),
+    );
+
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
+  });
 
   it('should block forbidden actions', async () => {
     const adapter = createMockAdapter();

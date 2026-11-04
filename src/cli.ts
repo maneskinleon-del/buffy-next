@@ -19,6 +19,7 @@ import {
   toJSON,
 } from './core/presenter.js';
 import { loadState, updateState, ensureBuffyDir } from './state/store.js';
+import { listInflight, resolveClaim, getJournalPath, type JournalResolution } from './core/execution-journal.js';
 import { stripFlags } from './shared/cli-args.js';
 import { contextEnvInfo, execCtx, listCtxCommands, resolveContextRepo } from './shared/ctx.js';
 import {
@@ -106,6 +107,89 @@ async function main() {
       console.log(`  comandos ctx: ${ctxInfo.commands.length > 0 ? ctxInfo.commands.join(', ') : '(ninguno)'}`);
     }
     return;
+  }
+
+  if (command === 'journal') {
+    // Recuperación de claims abandonados. Fase 1 no libera nada automáticamente
+    // (ni por PID, ni por antigüedad, ni por timeout): la única vía es una
+    // decisión humana que se valida por identidad y se registra en el journal
+    // antes de borrar el claim.
+    const sub = args[1];
+    const RESOLUTIONS: JournalResolution[] = ['efecto_confirmado', 'efecto_ausente_confirmado', 'abandonada_sin_determinar'];
+    const journalUsage = `
+buffy journal                          Claims inflight (en curso o abandonados)
+buffy journal list [--json]            Igual, explícito
+buffy journal resolve <fingerprint> <executionId> <resolution> <motivo...>
+
+  resolution: ${RESOLUTIONS.join(' | ')}
+
+  Exige el executionId del claim inspeccionado (validación de identidad) y un
+  motivo (registro auditable). No libera si el propietario sigue vivo en este
+  host. No hay liberación automática.
+`;
+
+    if (!sub || sub === 'list') {
+      const claims = listInflight();
+      if (jsonMode) {
+        console.log(toJSON({ claims, count: claims.length }));
+        return;
+      }
+      console.log(`\nClaims inflight: ${claims.length}`);
+      for (const c of claims) {
+        console.log(`  fingerprint:  ${c.fingerprint}`);
+        console.log(`    acción:       ${c.actionId} (${c.target} @ ${c.platform})`);
+        console.log(`    executionId:  ${c.executionId ?? '(sin executionId)'}`);
+        console.log(`    requestId:    ${c.requestId ?? '(sin requestId)'}`);
+        console.log(`    propietario:  pid ${c.pid} @ ${c.hostname} — desde ${c.startedAt}`);
+      }
+      console.log(
+        claims.length > 0
+          ? `\nPara resolver uno: buffy journal resolve <fingerprint> <executionId> <resolution> "<motivo>"\n`
+          : '',
+      );
+      return;
+    }
+
+    if (sub === 'resolve') {
+      const fingerprint = args[2];
+      const executionId = args[3];
+      const resolution = args[4];
+      const motivo = args.slice(5).filter((a) => !a.startsWith('--')).join(' ').trim();
+      if (!fingerprint || !executionId || !resolution || !motivo) {
+        console.error(journalUsage);
+        process.exit(1);
+      }
+      if (!RESOLUTIONS.includes(resolution as JournalResolution)) {
+        console.error(`Resolución inválida: ${resolution}`);
+        console.error(`Valores admitidos: ${RESOLUTIONS.join(' | ')}`);
+        process.exit(1);
+      }
+      // expected.executionId es lo que valida el humano: solo se borra el claim
+      // cuyo executionId coincide con el que se inspeccionó.
+      const resolved = resolveClaim(fingerprint, resolution as JournalResolution, {
+        expected: { executionId },
+        resolutionReason: motivo,
+      });
+      if (!resolved) {
+        console.error(
+          'No se resolvió: el claim no existe, el executionId no coincide, el propietario sigue vivo en este host, o no se pudo escribir la resolución en el journal. No se borró nada.',
+        );
+        process.exit(1);
+      }
+      if (jsonMode) {
+        console.log(toJSON({ resolved: true, fingerprint, resolution, reason: motivo, journal: getJournalPath() }));
+        return;
+      }
+      console.log(`\n✅ Claim resuelto: ${fingerprint}`);
+      console.log(`   resolución: ${resolution}`);
+      console.log(`   motivo:     ${motivo}`);
+      console.log(`   registro:   ${getJournalPath()}\n`);
+      return;
+    }
+
+    console.error(`Subcomando desconocido: journal ${sub}`);
+    console.error(journalUsage);
+    process.exit(1);
   }
 
   ensureBuffyDir();
@@ -439,6 +523,9 @@ Uso:
                                  Inyectar MCP + GEMINI.md + superficie AGY
   buffy ctx <comando> [args]     Delegar a Buffy Context (discovery: buffy ctx)
   buffy env                      Versiones y rutas de Next + Context
+  buffy journal [list]           Claims inflight (en curso o abandonados)
+  buffy journal resolve <fp> <executionId> <resolution> "<motivo>"
+                                 Resolución humana de un claim abandonado (auditada)
   --json                         Salida en formato JSON
   --pilot                        Activar modo piloto (telemetry)
   --help                         Esta ayuda

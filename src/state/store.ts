@@ -1,13 +1,19 @@
 // Buffy Next — State Store
 // Persists scan results and preferences at ~/.buffy/state.json
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import type { BuffyState, ExecutionEvidenceRecord } from '../core/types.js';
+import { acquireStateLock, releaseStateLock } from '../core/execution-journal.js';
 
-const BUFFY_DIR = join(homedir(), '.buffy');
-const STATE_FILE = join(BUFFY_DIR, 'state.json');
+function getBuffyDir(): string {
+  if (process.env.BUFFY_DIR) return process.env.BUFFY_DIR;
+  return join(homedir(), '.buffy');
+}
+function getStateFile(): string {
+  return join(getBuffyDir(), 'state.json');
+}
 
 const DEFAULT_STATE: BuffyState = {
   actionHistory: [],
@@ -30,28 +36,93 @@ export function recordEvidence(state: BuffyState, record: ExecutionEvidenceRecor
 
 export function loadState(): BuffyState {
   try {
-    if (existsSync(STATE_FILE)) {
-      const raw = readFileSync(STATE_FILE, 'utf-8');
-      return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    const stateFile = getStateFile();
+    if (existsSync(stateFile)) {
+      const raw = readFileSync(stateFile, 'utf-8');
+      try {
+        const parsed = JSON.parse(raw);
+        return { ...DEFAULT_STATE, ...parsed };
+      } catch (e) {
+        // Corrupted file - preserve it for diagnosis, don't overwrite silently
+        try {
+          const backupPath = stateFile + '.corrupt.' + Date.now();
+          writeFileSync(backupPath, raw);
+        } catch {}
+        // Do not return silently merged defaults that would allow overwriting
+        throw new Error('state.json corrupto - no se puede leer');
+      }
     }
-  } catch {
-    // Corrupted file, use default
+  } catch (e: any) {
+    if (e.message?.includes('corrupto')) throw e;
+    throw new Error('state.json ilegible - no se puede leer');
   }
   return { ...DEFAULT_STATE };
 }
 
 export function saveState(state: BuffyState): void {
-  mkdirSync(BUFFY_DIR, { recursive: true });
-  writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
+  const buffyDir = getBuffyDir();
+  const stateFile = getStateFile();
+  mkdirSync(buffyDir, { recursive: true });
+  const lock = acquireStateLock();
+  if (!lock.acquired) {
+    throw new Error('No se pudo adquirir lock para escribir state.json');
+  }
+  try {
+    const tmpPath = stateFile + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2);
+    const content = JSON.stringify(state, null, 2);
+    writeFileSync(tmpPath, content, 'utf-8');
+    // Atomic rename only - no fallback to direct write
+    try {
+      renameSync(tmpPath, stateFile);
+    } catch (e) {
+      try { unlinkSync(tmpPath); } catch {}
+      throw e;
+    }
+  } finally {
+    releaseStateLock(lock);
+  }
 }
 
 export function updateState(patch: Partial<BuffyState>): BuffyState {
-  const current = loadState();
-  const updated = { ...current, ...patch };
-  saveState(updated);
-  return updated;
+  const lock = acquireStateLock();
+  if (!lock.acquired) {
+    throw new Error('No se pudo adquirir lock para actualizar state.json');
+  }
+  try {
+    const buffyDir = getBuffyDir();
+    const stateFile = getStateFile();
+    let current: BuffyState;
+    try {
+      current = loadState();
+    } catch (e: any) {
+      // No sobrescribir archivo corrupto/ilegible
+      if (e.message?.includes('corrupto') || e.message?.includes('ilegible')) {
+        throw e;
+      }
+      throw e;
+    }
+    const updated = { ...current, ...patch };
+    mkdirSync(buffyDir, { recursive: true });
+    const tmpPath = stateFile + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2);
+    const content = JSON.stringify(updated, null, 2);
+    try {
+      writeFileSync(tmpPath, content, 'utf-8');
+    } catch (e) {
+      try { unlinkSync(tmpPath); } catch {}
+      throw e;
+    }
+    try {
+      renameSync(tmpPath, stateFile);
+    } catch (e) {
+      try { unlinkSync(tmpPath); } catch {}
+      throw e;
+    }
+    return updated;
+  } finally {
+    releaseStateLock(lock);
+  }
 }
 
 export function ensureBuffyDir(): void {
-  mkdirSync(BUFFY_DIR, { recursive: true });
+  mkdirSync(getBuffyDir(), { recursive: true });
 }
