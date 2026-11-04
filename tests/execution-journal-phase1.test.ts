@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { claimInflight, appendToJournal, releaseInflight, getFingerprint, readJournal, listInflight } from '../src/core/execution-journal.js';
@@ -97,7 +97,20 @@ describe('Execution Journal Fase 1 - Critical Guarantees', () => {
       expect(claim?.platform).toBe('linux');
       expect(claim?.requestId).toBe('req-123');
       expect(claim?.executionId).toBe('exec-456');
-      releaseInflight(result.fingerprint);
+      expect(releaseInflight(result.fingerprint, { executionId: 'exec-456' })).toBe(true);
+    });
+
+    it('identidad obligatoria: un claim con executionId no se libera sin nombrarlo', () => {
+      const res = claimInflight('identidad-obligatoria', 't', 'linux', { executionId: 'exec-e1' });
+      expect(res.claimed).toBe(true);
+
+      // Sin nombrar: no se borra nada, aunque exista el fingerprint
+      expect(releaseInflight(res.fingerprint)).toBe(false);
+      expect(existsSync(res.claimPath)).toBe(true);
+
+      // Nombrando la identidad correcta: se libera
+      expect(releaseInflight(res.fingerprint, { executionId: 'exec-e1' })).toBe(true);
+      expect(existsSync(res.claimPath)).toBe(false);
     });
 
     it('equivalent concurrent operations blocked', () => {
@@ -105,7 +118,7 @@ describe('Execution Journal Fase 1 - Critical Guarantees', () => {
       expect(result1.claimed).toBe(true);
       const result2 = claimInflight('install-tool-test2', 'node', 'linux', { executionId: 'exec-2' });
       expect(result2.claimed).toBe(false);
-      releaseInflight(result1.fingerprint);
+      expect(releaseInflight(result1.fingerprint, { executionId: 'exec-1' })).toBe(true);
     });
 
     it('different operations not blocked', () => {
@@ -113,8 +126,8 @@ describe('Execution Journal Fase 1 - Critical Guarantees', () => {
       expect(result1.claimed).toBe(true);
       const result2 = claimInflight('install-tool-test4', 'python', 'linux', { executionId: 'exec-2' });
       expect(result2.claimed).toBe(true);
-      releaseInflight(result1.fingerprint);
-      releaseInflight(result2.fingerprint);
+      expect(releaseInflight(result1.fingerprint, { executionId: 'exec-1' })).toBe(true);
+      expect(releaseInflight(result2.fingerprint, { executionId: 'exec-2' })).toBe(true);
     });
   });
 
@@ -151,7 +164,98 @@ describe('Execution Journal Fase 1 - Critical Guarantees', () => {
       expect(res.claimed).toBe(true);
       const r = reconcileClaim(res.fingerprint);
       expect(r.reconciled).toBe(false);
-      releaseInflight(res.fingerprint);
+      // Claim anónimo (sin executionId/requestId): no requiere nombramiento
+      expect(releaseInflight(res.fingerprint)).toBe(true);
+    });
+  });
+
+  describe('Resolución humana de claims abandonados', () => {
+    /** Claim escrito a mano: propietario muerto y de otro host (no verificable aquí). */
+    function writeAbandonedClaim(executionId: string) {
+      const fingerprint = getFingerprint('test-abandoned-' + executionId, 't', 'linux');
+      mkdirSync(join(testDir, 'inflight'), { recursive: true });
+      const claimPath = join(testDir, 'inflight', `${fingerprint}.json`);
+      writeFileSync(
+        claimPath,
+        JSON.stringify(
+          {
+            fingerprint,
+            actionId: 'test-abandoned-' + executionId,
+            target: 't',
+            platform: 'linux',
+            executionId,
+            pid: 2147483646,
+            hostname: 'host-remoto',
+            startedAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ) + '\n',
+      );
+      return { fingerprint, claimPath };
+    }
+
+    it('releaseInflight no borra un claim cuya identidad no coincide', () => {
+      const res = claimInflight('test-identidad', 't', 'linux', { executionId: 'exec-propio' });
+      expect(res.claimed).toBe(true);
+
+      expect(releaseInflight(res.fingerprint, { executionId: 'exec-ajeno' })).toBe(false);
+      expect(existsSync(res.claimPath)).toBe(true);
+
+      expect(releaseInflight(res.fingerprint, { executionId: 'exec-propio' })).toBe(true);
+      expect(existsSync(res.claimPath)).toBe(false);
+    });
+
+    it('resolveClaim exige motivo y ejecutionId coincidente, y registra la decisión', async () => {
+      const { resolveClaim } = await import('../src/core/execution-journal.js');
+      const { fingerprint, claimPath } = writeAbandonedClaim('exec-resolver');
+
+      // Sin motivo: no es auditable
+      expect(
+        resolveClaim(fingerprint, 'abandonada_sin_determinar', {
+          expected: { executionId: 'exec-resolver' },
+          resolutionReason: '   ',
+        }),
+      ).toBe(false);
+
+      // executionId que no corresponde al claim almacenado
+      expect(
+        resolveClaim(fingerprint, 'abandonada_sin_determinar', {
+          expected: { executionId: 'exec-otro' },
+          resolutionReason: 'revisado en el listado',
+        }),
+      ).toBe(false);
+      expect(existsSync(claimPath)).toBe(true);
+
+      // Resolución válida: se registra antes de borrar
+      expect(
+        resolveClaim(fingerprint, 'efecto_ausente_confirmado', {
+          expected: { executionId: 'exec-resolver' },
+          resolutionReason: 'verifiqué que el cambio no se aplicó',
+        }),
+      ).toBe(true);
+      expect(existsSync(claimPath)).toBe(false);
+
+      const resolutions = readJournal().filter((e) => e.type === 'resolution' && e.fingerprint === fingerprint);
+      expect(resolutions.length).toBe(1);
+      expect(resolutions[0].resolution).toBe('efecto_ausente_confirmado');
+      expect(resolutions[0].resolutionReason).toBe('verifiqué que el cambio no se aplicó');
+      expect(resolutions[0].resolvedBy).toBe('human');
+    });
+
+    it('resolveClaim no libera un claim cuyo propietario sigue vivo', async () => {
+      const { resolveClaim } = await import('../src/core/execution-journal.js');
+      const res = claimInflight('test-vivo', 't', 'linux', { executionId: 'exec-vivo' });
+
+      expect(
+        resolveClaim(res.fingerprint, 'abandonada_sin_determinar', {
+          expected: { executionId: 'exec-vivo' },
+          resolutionReason: 'intento sobre proceso vivo',
+        }),
+      ).toBe(false);
+      expect(existsSync(res.claimPath)).toBe(true);
+
+      releaseInflight(res.fingerprint, { executionId: 'exec-vivo' });
     });
   });
 

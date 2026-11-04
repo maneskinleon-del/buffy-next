@@ -123,6 +123,34 @@ describe('executeWithGates — Unified Execution Pipeline', () => {
 
   // --- Gate 1: Forbidden ---
 
+  it('a failing state write after a successful effect never reports the action as not executed', async () => {
+    const adapter = createMockAdapter();
+    vi.mocked(updateState).mockImplementationOnce(() => {
+      throw new Error('No se pudo adquirir lock para actualizar state.json');
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await executeWithGatesForTests({
+      adapter,
+      action: autoSafeAction,
+      actions: TEST_ACTIONS,
+      customExecutorMap: TEST_EXECUTOR_MAP,
+    });
+
+    // El efecto ya ocurrió: el resultado refleja la ejecución, no el fallo de persistencia.
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('auto executed');
+    // Y el fallo no es silencioso.
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('efecto ejecutado pero el historial no pudo persistirse'),
+      expect.anything(),
+    );
+
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
+  });
+
   it('should block forbidden actions', async () => {
     const adapter = createMockAdapter();
 

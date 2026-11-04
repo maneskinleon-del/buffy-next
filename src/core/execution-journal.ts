@@ -265,15 +265,63 @@ export function claimInflight(actionId: string, target: string, platform: string
   }
 }
 
-export function releaseInflight(fingerprint: string): boolean {
+export interface ClaimIdentity {
+  executionId?: string;
+  requestId?: string;
+  pid?: number;
+  hostname?: string;
+}
+
+/**
+ * A claim from another host cannot be liveness-checked from here: a local PID
+ * with the same number says nothing about it, so it is never treated as alive.
+ */
+function isClaimOwnerAlive(claim: InflightClaim): boolean {
+  if (claim.hostname && claim.hostname !== hostname()) return false;
+  return isProcessAlive(claim.pid);
+}
+
+function identityMatches(claim: InflightClaim, expected: ClaimIdentity): boolean {
+  if (expected.executionId !== undefined && expected.executionId !== claim.executionId) return false;
+  if (expected.requestId !== undefined && expected.requestId !== claim.requestId) return false;
+  if (expected.pid !== undefined && expected.pid !== claim.pid) return false;
+  if (expected.hostname !== undefined && expected.hostname !== claim.hostname) return false;
+  return true;
+}
+
+/**
+ * Whether `expected` names the claim: a claim carrying executionId/requestId is
+ * named by at least one of them; an anonymous claim (no identifiers) needs no
+ * naming.
+ */
+function namesClaim(claim: InflightClaim, expected: ClaimIdentity): boolean {
+  if (claim.executionId !== undefined || claim.requestId !== undefined) {
+    return (
+      (claim.executionId !== undefined && expected.executionId !== undefined) ||
+      (claim.requestId !== undefined && expected.requestId !== undefined)
+    );
+  }
+  return true;
+}
+
+/**
+ * Releases a claim. Identity is mandatory: the caller must name the claim it
+ * releases (by executionId or requestId when the claim carries them) and the
+ * stored claim is re-read so it must still carry that identity. An operation
+ * never deletes a claim other than its own, unnamed or not (same guard
+ * `reconcileClaim` applies before releasing).
+ */
+export function releaseInflight(fingerprint: string, expected: ClaimIdentity = {}): boolean {
   ensureDirs();
   const claimPath = join(getInflightDir(), `${fingerprint}.json`);
   try {
-    if (existsSync(claimPath)) {
-      unlinkSync(claimPath);
-      return true;
+    if (!existsSync(claimPath)) return false;
+    const current = readInflight(fingerprint);
+    if (!current || !namesClaim(current, expected) || !identityMatches(current, expected)) {
+      return false;
     }
-    return false;
+    unlinkSync(claimPath);
+    return true;
   } catch {
     return false;
   }
@@ -356,7 +404,7 @@ export function readJournal(): JournalEntry[] {
   }
 }
 
-export function reconcileClaim(fingerprint: string, expected?: { executionId?: string; requestId?: string }): { reconciled: boolean; hadEntry: boolean } {
+export function reconcileClaim(fingerprint: string, expected?: ClaimIdentity): { reconciled: boolean; hadEntry: boolean } {
   const journal = readJournal();
   const claim = readInflight(fingerprint);
   if (!claim) {
@@ -380,7 +428,7 @@ export function reconcileClaim(fingerprint: string, expected?: { executionId?: s
   const reqId = claimReqId;
   
   if (!execId && !reqId) {
-    if (isProcessAlive(claim.pid)) {
+    if (isClaimOwnerAlive(claim)) {
       return { reconciled: false, hadEntry: false };
     }
     return { reconciled: false, hadEntry: false };
@@ -415,29 +463,55 @@ export function reconcileClaim(fingerprint: string, expected?: { executionId?: s
     if (claimAgain.executionId !== claimExecId || claimAgain.requestId !== claimReqId || claimAgain.pid !== claim.pid) {
       return { reconciled: false, hadEntry: true };
     }
-    const released = releaseInflight(fingerprint);
+    const released = releaseInflight(fingerprint, {
+      executionId: claimExecId,
+      requestId: claimReqId,
+      pid: claim.pid,
+      hostname: claim.hostname,
+    });
     if (!released) {
       return { reconciled: false, hadEntry: true };
     }
     return { reconciled: true, hadEntry: true };
   }
   
-  if (isProcessAlive(claim.pid)) {
+  if (isClaimOwnerAlive(claim)) {
     return { reconciled: false, hadEntry: false };
   }
   return { reconciled: false, hadEntry: false };
 }
 
-export function resolveClaim(fingerprint: string, resolution: JournalResolution, opts: { resolvedBy?: string; resolutionReason?: string } = {}): boolean {
+export function resolveClaim(
+  fingerprint: string,
+  resolution: JournalResolution,
+  opts: { expected: ClaimIdentity; resolutionReason: string; resolvedBy?: string },
+): boolean {
   const claim = readInflight(fingerprint);
   if (!claim) return false;
-  
-  // Check if process is still alive
-  if (isProcessAlive(claim.pid)) {
-    // Do not allow release if process is known active
+
+  // Identity validation: the resolver must name the record it inspected. The
+  // usable identifier comes from the claim itself, so a claim carrying
+  // executionId/requestId cannot be resolved without naming that value.
+  const expected = opts.expected || {};
+  const hasVerifiableIdentity =
+    (claim.executionId !== undefined && expected.executionId !== undefined) ||
+    (claim.requestId !== undefined && expected.requestId !== undefined) ||
+    (claim.executionId === undefined && claim.requestId === undefined && expected.pid !== undefined);
+  if (!hasVerifiableIdentity || !identityMatches(claim, expected)) {
     return false;
   }
-  
+
+  // Never release a claim whose owner is known to be alive
+  if (isClaimOwnerAlive(claim)) {
+    return false;
+  }
+
+  // A decision without a stated reason is not auditable
+  const reason = (opts.resolutionReason || '').trim();
+  if (!reason) {
+    return false;
+  }
+
   // Record resolution in journal first
   const entry: JournalEntry = {
     type: 'resolution',
@@ -450,7 +524,7 @@ export function resolveClaim(fingerprint: string, resolution: JournalResolution,
     timestamp: new Date().toISOString(),
     resolution,
     resolvedBy: opts.resolvedBy || 'human',
-    resolutionReason: opts.resolutionReason || '',
+    resolutionReason: reason,
   };
   
   const written = appendToJournal(entry);
@@ -458,6 +532,12 @@ export function resolveClaim(fingerprint: string, resolution: JournalResolution,
     return false;
   }
   
+  // Re-read before deleting: release exactly the claim that was journaled
+  const claimAgain = readInflight(fingerprint);
+  if (!claimAgain || claimAgain.startedAt !== claim.startedAt || !identityMatches(claimAgain, expected)) {
+    return false;
+  }
+
   // Only release after journal is written
-  return releaseInflight(fingerprint);
+  return releaseInflight(fingerprint, expected);
 }

@@ -28,3 +28,18 @@
 - Cambios committeados y pusheados a origin
 
 VEREDICTO: FASE 1 CERRADA
+
+## REPARACIÓN POST-REINICIO — CIERRE (2026-11-04)
+
+### Observaciones cerradas
+1. **Identidad obligatoria en `releaseInflight()`** — ahora es obligatoria en runtime: un claim con executionId/requestId no se libera sin nombrar al menos uno de ellos (`namesClaim` + `identityMatches`, re-lectura antes del borrado). Prueba de garantía incluida.
+2. **Pruebas automatizadas del CLI** — 5 casos en `tests/journal-cli.test.ts` vía subprocess real (`npx tsx src/cli.ts`) con aislamiento `BUFFY_DIR` temporal: list --json expone identidad; resolve sin args/executionId equivocado/resolución inválida → exit 1 preservando el claim; resolución válida → exit 0, claim borrado y entry `resolution` en `journal.jsonl` con motivo y executionId.
+
+### Validación de cierre
+- `npx tsc --noEmit`: OK (exit 0)
+- Suite completa: 48 archivos, 728/728 tests passed (722 previas + 1 identidad obligatoria + 5 CLI)
+- Respaldo en disco externo: parche de diff + tgz del archivo nuevo, con verificación `git apply --check --reverse`
+
+### Resultado
+- Compilación limpia, suite verde, observaciones cerradas con evidencia.
+- Commit reparador de cierre creado sobre 39bd834 y publicado en origin.

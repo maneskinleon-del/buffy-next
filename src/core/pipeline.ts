@@ -450,12 +450,20 @@ async function executeWithGatesInternal(options: {
   console.log(renderActionResult(result));
 
   if (result.success) {
-    updateState({
-      actionHistory: [
-        ...loadState().actionHistory,
-        { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
-      ].slice(-50),
-    });
+    try {
+      updateState({
+        actionHistory: [
+          ...loadState().actionHistory,
+          { actionId: action.id, timestamp: new Date().toISOString(), success: result.success, message: result.message },
+        ].slice(-50),
+      });
+    } catch (stateError) {
+      // The effect already happened: a failed history write must never be
+      // reported as "the action did not run", and must never be silent.
+      // The result is returned untouched — the failure is in the record, not
+      // in the execution (the evidence block below still runs).
+      console.error('[buffy:state] efecto ejecutado pero el historial no pudo persistirse — la acción NO se revierte:', stateError);
+    }
   }
 
   // ExecutionEvidence — observational emission (Wiring Gate).

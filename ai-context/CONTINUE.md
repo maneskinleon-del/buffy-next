@@ -1,40 +1,33 @@
 # CONTINUE - Estado para retomar trabajo
 
 ## Estado del repositorio
-- **Rama:** master
-- **HEAD:** 795b61b test(mcp): buffy_search schema, delegation, structural guards
-- **Estado Git:** 
-  - M src/core/action-gate.ts
-  - M src/state/store.ts
-  - ?? ai-context/ (nuevo)
-  - ?? src/core/execution-journal.ts (nuevo)
-  - ?? tmp
+- **Rama:** audit/execution-journal-phase1
+- **HEAD:** 39bd834 fix(execution-journal): strict claim identity and remove fake check (publicado en origin)
+- **Base sincronizada:** local == origin (sin ahead/behind)
 
 ## Último checkpoint validado
-**Execution Journal Fase 1 - Implementación y corrección completadas**
-- Fecha: 2026-11-02
-- Validación: 47 archivos de test, 717 tests pasados
-- TypeScript: sin errores
+**Reparación post-reinicio — cierre de observaciones abiertas (2026-11-04)**
+- Recuperación: commit reparador anterior (`39bd834`) quedó registrado y en origin; el trabajo no se perdió en el reinicio del PC.
+- Observación 1 cerrada: `releaseInflight()` exige identidad (runtime): un claim con executionId/requestId no se libera sin nombrarlo (`namesClaim` + `identityMatches`, re-lectura previa al borrado). Call sites de producción en `action-gate.ts` ya pasaban identidad completa.
+- Observación 2 cerrada: CLI `buffy journal list|resolve` con 5 pruebas automatizadas de subprocess en `tests/journal-cli.test.ts` (Aislamiento por BUFFY_DIR temporal, identidad equivocada → exit 1 sin borrar, resolución válida → registro auditable en journal.jsonl).
+- TypeScript: `npx tsc --noEmit` sin errores.
+- Suite completa: 48 archivos, **728/728 tests pasados** (722 previas + 1 identidad + 5 CLI).
 
 ## Tareas pendientes
-- [ ] Revisar y actualizar documentación según evolución
-- [ ] Monitorear uso en producción/test
 - [ ] Considerar Fase 2 (idempotencyKey, garantías de ejecución exactamente una vez)
+- [ ] Monitorear uso en producción/test
 
 ## Riesgos conocidos
 - **Idempotencia secuencial:** Fase 1 NO garantiza ejecución exactamente una vez ante reintentos secuenciales. Requiere Fase 2.
-- **Locks abandonados:** El sistema es conservador - no elimina locks automáticamente. Requiere resolución humana explícita.
+- **Locks abandonados:** conservador — liberación SOLO por decisión humana (`buffy journal resolve`), con identidad + motivo; el propietario vivo nunca se libera.
 - **Durabilidad ante caída OS:** fsync implementado pero garantías dependen del sistema de archivos.
 
 ## Archivos importantes
-- `src/core/action-gate.ts` - Puerta única de ejecución
-- `src/core/execution-journal.ts` - Journal y claims inflight
-- `src/state/store.ts` - Persistencia protegida
-- `ai-context/architecture/execution-journal.md` - Documentación del journal
-- `ai-context/testing/critical-guarantees.md` - Garantías críticas
-
-## Próxima acción concreta
-Ejecutar suite completa de tests antes de cualquier modificación: `npm test`
+- `src/core/action-gate.ts` - Puerta única de ejecución (libera con identidad)
+- `src/core/execution-journal.ts` - Journal, claims inflight y resolución humana
+- `src/cli.ts` - Subcomando `buffy journal`
+- `tests/journal-cli.test.ts` - Pruebas de subprocess del CLI
+- `ai-context/reports/execution-journal-phase1/verificacion-final/informe-verificacion-final.md`
 
 ## Pruebas que deben ejecutarse antes de modificar código
 ```bash
@@ -44,7 +37,5 @@ npx tsc --noEmit
 ```
 
 ## Notas
-- ActionGate sigue siendo la única puerta de ejecución
-- Los 7 niveles de evidencia se mantienen sin cambios
-- No se hizo commit/push/merge/deploy
-- Estructura de trabajo preparada para múltiples agentes
+- ActionGate sigue siendo la única puerta de ejecución; el fallo de escritura de historial post-efecto se reporta (console.error), no revierte ni silencia.
+- El commit reparador de cierre se crea en esta sesión después de esta actualización (base 39bd834).

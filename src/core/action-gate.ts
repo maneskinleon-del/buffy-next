@@ -204,7 +204,13 @@ export class ActionGate {
         message: failResult.message,
       });
       if (journalWritten) {
-        releaseInflight(claim.fingerprint);
+        // Release only our own claim (identity re-checked inside releaseInflight)
+        releaseInflight(claim.fingerprint, {
+          executionId: execRecord.executionId,
+          requestId: request.requestId,
+          pid: process.pid,
+          hostname: hostname(),
+        });
       }
       return failResult;
     }
@@ -235,7 +241,13 @@ export class ActionGate {
         message: result.message,
       });
       if (journalWritten) {
-        releaseInflight(claim.fingerprint);
+        // Release only our own claim (identity re-checked inside releaseInflight)
+        releaseInflight(claim.fingerprint, {
+          executionId: execRecord.executionId,
+          requestId: request.requestId,
+          pid: process.pid,
+          hostname: hostname(),
+        });
       }
       // If journal write failed, keep claim for recovery
       return result;
@@ -265,7 +277,13 @@ export class ActionGate {
       message: result.message,
     });
     if (journalWritten) {
-      releaseInflight(claim.fingerprint);
+      // Release only our own claim (identity re-checked inside releaseInflight)
+      releaseInflight(claim.fingerprint, {
+        executionId: execRecord.executionId,
+        requestId: request.requestId,
+        pid: process.pid,
+        hostname: hostname(),
+      });
     }
     // If journal write failed, keep claim for recovery
 
