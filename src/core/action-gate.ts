@@ -222,6 +222,10 @@ export class ActionGate {
         const result: ActionResult = prev
           ? { success: prev.success, message: `[cached] ${prev.message}`, details: { state: 'cached' } }
           : { success: true, message: '[cached] efecto_confirmado (resultado no registrado)', details: { state: 'cached' } };
+        // Desviación documentada del v3 (ver design-v3-notas.md): esta invocación NO
+        // ejecuta efecto, así que su registro de ejecución termina como no-ejecutado
+        // (fail) para que la evidencia nunca la cuente como acción ejecutada. El
+        // resultado devuelto al llamador sigue siendo el cacheado (success + cached).
         this.execStore.fail(execRecord.executionId, result);
         if (token) this.authStore.consume(token.tokenId);
         return result;

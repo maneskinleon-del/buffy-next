@@ -163,7 +163,7 @@ buffy journal resolve --key <key> <resolution> <motivo...> [--evidence "<texto>"
       const evIdx = rest.indexOf('--evidence');
       const evidence = evIdx >= 0 ? (rest[evIdx + 1] ?? '').trim() : '';
       const motivo = rest
-        .filter((t, i) => t !== '--evidence' && !t.startsWith('--') && i !== evIdx + 1)
+        .filter((t, i) => t !== '--evidence' && !t.startsWith('--') && (evIdx < 0 || i !== evIdx + 1))
         .join(' ')
         .trim();
       if (!key || !resolution || !motivo) {
