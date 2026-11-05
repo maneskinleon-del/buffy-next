@@ -139,6 +139,12 @@ export interface ActionResult {
   success: boolean;
   message: string;
   details?: Record<string, unknown>;
+  /**
+   * Fase 2 (idempotencia): presente solo en ejecuciones con idempotencyKey.
+   * `false` significa que el append terminal del journal falló: el efecto pudo
+   * ocurrir pero no está en el journal duradero y la key queda needs_resolution.
+   */
+  persisted?: boolean;
 }
 
 // ─── Canonical Request ─────────────────────────────────────
