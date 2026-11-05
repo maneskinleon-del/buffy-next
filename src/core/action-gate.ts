@@ -424,7 +424,11 @@ export class ActionGate {
       if (!persisted) {
         return { ...result, persisted: false };
       }
-      if (journalWritten) {
+      // Fase 2 (L2): liberar claim según `persisted` si hay key,
+      // según `journalWritten` (entrada Fase 1) si no hay. Evita que una
+      // entrada Fase 1 fallida retenga la claim aunque la keyed ya esté
+      // completada — el escenario descrito en L2.
+      if (idempotencyKey !== undefined ? persisted : journalWritten) {
         releaseInflight(claim.fingerprint, {
           executionId: journalExecId,
           requestId: request.requestId,

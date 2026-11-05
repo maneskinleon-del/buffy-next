@@ -1,4 +1,9 @@
-# Notas de implementación — Execution Journal Fase 2 (sobre `design-v3.md`)
+# Notas de implementación — Execution Journal Fase 2 (sobre `design-v3.md`)  [revisión 2026-11-05]
+> Revisión con reseña del operador (2026-11-05): la implementación pasó la revisión y
+> se alineó el límite L2: ahora el gate libera la claim según `persisted` (entrada
+> keyed) cuando hay key, y según `journalWritten` (entrada Fase 1) cuando no. Esto
+> mitiga el caso descrito (clave keyed completada aunque la Fase 1 falle).
+> `design-v3.md` sigue sin tocar.
 
 > `design-v3.md` es la fuente de verdad y permanece **verbatim** (no se modifica).
 > Este archivo registra dónde el código se aparta del texto y qué límites se
@@ -18,7 +23,7 @@
 | # | Límite | Detalle | Cubierto por |
 |---|--------|---------|--------------|
 | L1 | Misma fingerprint con **keys distintas** no se excluyen mutuamente | El claim solo serializa mientras el ganador lo retiene. Si la segunda key llega después de `releaseInflight`, el executor corre por segunda vez. Son operaciones lógicas distintas, así que es aceptable, pero **no** está listado en §11 del v3. T5 lo demuestra con delay de 4 s en el ganador → el segundo sale `aborted/claim_exists`. | T5 |
-| L2 | Dos registros por ejecución con key | Se escribe la entrada `execution` de Fase 1 y la entrada keyed. Si la keyed se persiste pero la de Fase 1 falla → `journalWritten=false` y el claim no se libera aunque la key esté `completed` (bloquea otras keys con esa fingerprint). Si falla la keyed → `execution/success` sin terminal keyed → `needs_resolution`. Recuperación: inspeccionar con `buffy journal` (claim) y resolver la key con `journal resolve --key`; la key manda para el estado de la key, el claim manda para la fingerprint. | T9 + resolución manual |
+| L2 | Two-registro por ejecución con key — **mitigado en código** | Se escribe la entrada `execution` de Fase 1 y la entrada keyed. Si la keyed se persiste pero la de Fase 1 falla → antes el claim no se liberaba aunque la key estuviera completed; ahora el gate libera según `persisted` (entrada keyed) cuando hay key. Si falla la keyed → `execution/success` sin terminal keyed → claim liberado según `journalWritten`, key en needs_resolution. Recuperación: `buffy journal` (claim) + `journal resolve --key`. | # ; corregido |
 | L3 | Sin `journal unlock` | Un `journal.lock` huérfano (p. ej. `kill -9` durante el append; el lock se toma con `O_EXCL` y se libera en `finally`, que no corre ante SIGKILL) bloquea todas las escrituras del journal hasta que se borre a mano. **No entra en esta fase.** Candidato Fase 3: `journal unlock --confirm-dead-pid` con liveness de 4 condiciones (reutiliza `startedOwnerAlive`). | no cubierto — deuda explícita |
 | L4 | T4 acepta `in_progress` o `cached` para el perdedor | El orden depende del timing real de los dos procesos; la aserción garantiza "el executor corrió 1 vez", que es la garantía at-most-once, pero no distingue el estado del perdedor. | T4 |
 
