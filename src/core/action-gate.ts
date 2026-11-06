@@ -438,11 +438,6 @@ export class ActionGate {
           pid: process.pid,
           hostname: hostname(),
         });
-      } else {
-        // Determinista hacia la probabilidad de condición: sin claim con
-        // entrada, pero sigue returning result con mensaje consistente.
-        // Esto no puede suceder en el flujo actual con persistencia iÓNICA.
-        return { ...result, persisted: false };
       }
       return { ...result, persisted: true };
     }
