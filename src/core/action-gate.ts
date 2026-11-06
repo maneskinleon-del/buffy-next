@@ -32,7 +32,19 @@ import { AuthorizationStore } from './authorization-store.js';
 import { ActionExecutionStore } from './action-execution-store.js';
 import { ActionPlanner } from './action-planner.js';
 import { ExecutorRegistry } from './executor-registry.js';
-import { claimInflight, appendToJournal, releaseInflight, getFingerprint, reconcileClaim } from './execution-journal.js';
+import {
+  claimInflight,
+  appendToJournal,
+  releaseInflight,
+  getFingerprint,
+  reconcileClaim,
+  beginKey,
+  finishKey,
+  hitFaultPoint,
+  validateIdempotencyKey,
+  type BeginKeyOutcome,
+  type FinishKeyContext,
+} from './execution-journal.js';
 import { hostname } from 'node:os';
 
 // ─── Action Gate ───────────────────────────────────────────
@@ -69,6 +81,18 @@ export class ActionGate {
     this.planner = options.actionPlanner ?? new ActionPlanner();
   }
 
+  /** Contexto para el append terminal con key (§6.4). */
+  private finishKeyContext(fingerprint: string, actionId: string, request: CanonicalRequest, executionId: string): FinishKeyContext {
+    return {
+      fingerprint,
+      actionId,
+      target: request.target,
+      platform: request.platform,
+      executionId,
+      requestId: request.requestId,
+    };
+  }
+
   // ─── Public API ────────────────────────────────────────
 
   /**
@@ -79,7 +103,13 @@ export class ActionGate {
    * @param rawParams - Raw parameters (e.g., tool name for install-tool)
    * @returns The result of the execution
    */
-  async execute(actionId: string, rawParams?: string): Promise<ActionResult> {
+  async execute(actionId: string, rawParams?: string, opts?: { idempotencyKey?: string }): Promise<ActionResult> {
+    // ── 0. Validar key (§6.1: sin efectos) ───────────
+    const idempotencyKey = opts?.idempotencyKey;
+    if (idempotencyKey !== undefined && !validateIdempotencyKey(idempotencyKey)) {
+      return { success: false, message: 'invalid_key: idempotencyKey debe tener 1-256 caracteres ASCII imprimibles' };
+    }
+
     // ── 1. Lookup ──────────────────────────────────────
     const action = this.actions.get(actionId);
     if (!action) {
@@ -164,20 +194,100 @@ export class ActionGate {
     const executionTokenId = token?.tokenId ?? 'auto-safe';
     const execRecord = this.execStore.start(executionTokenId, actionId);
 
-    // ── 9.5. Claim inflight (Execution Journal Fase 1) ──
+    // ── 9.5. Idempotencia (Fase 2, §6.2): beginKey antes del claim ──
+    let journalExecId = execRecord.executionId;
+    if (idempotencyKey !== undefined) {
+      let begin: BeginKeyOutcome;
+      try {
+        begin = beginKey(idempotencyKey, {
+          fingerprint: getFingerprint(actionId, request.target, request.platform),
+          actionId,
+          target: request.target,
+          platform: request.platform,
+          requestId: request.requestId,
+          executionId: execRecord.executionId,
+        });
+      } catch (error) {
+        const failResult: ActionResult = {
+          success: false,
+          message: `idempotencia: no se pudo iniciar la key (${error instanceof Error ? error.message : String(error)})`,
+          details: { state: 'begin_error' },
+        };
+        this.execStore.fail(execRecord.executionId, failResult);
+        if (token) this.authStore.consume(token.tokenId);
+        return failResult;
+      }
+      if (begin.state === 'cached') {
+        const prev = begin.cached.result;
+        const result: ActionResult = prev
+          ? { success: prev.success, message: `[cached] ${prev.message}`, details: { state: 'cached' } }
+          : { success: true, message: '[cached] efecto_confirmado (resultado no registrado)', details: { state: 'cached' } };
+        // Desviación documentada del v3 (ver design-v3-notas.md): esta invocación NO
+        // ejecuta efecto, así que su registro de ejecución termina como no-ejecutado
+        // (fail) para que la evidencia nunca la cuente como acción ejecutada. El
+        // resultado devuelto al llamador sigue siendo el cacheado (success + cached).
+        this.execStore.fail(execRecord.executionId, result);
+        if (token) this.authStore.consume(token.tokenId);
+        return result;
+      }
+      if (begin.state === 'invalid_key') {
+        const failResult: ActionResult = {
+          success: false,
+          message: `invalid_key: idempotencyKey debe tener 1-256 caracteres ASCII imprimibles`,
+        };
+        this.execStore.fail(execRecord.executionId, failResult);
+        if (token) this.authStore.consume(token.tokenId);
+        return failResult;
+      }
+      if (begin.state !== 'proceed') {
+        const messages: Record<'in_progress' | 'needs_resolution' | 'key_conflict', string> = {
+          in_progress: 'Operación ya en curso por esta key (in_progress)',
+          needs_resolution: 'Key bloqueada (needs_resolution): requiere journal resolve --key',
+          key_conflict: 'key_conflict: esta key está asociada a otra fingerprint',
+        };
+        const failResult: ActionResult = {
+          success: false,
+          message: `${messages[begin.state]}: ${idempotencyKey}`,
+          details: { state: begin.state },
+        };
+        this.execStore.fail(execRecord.executionId, failResult);
+        if (token) this.authStore.consume(token.tokenId);
+        return failResult;
+      }
+      journalExecId = begin.executionId;
+    }
+
+    // ── 9.6. Claim inflight (§6.3) ──
     const claim = claimInflight(actionId, request.target, request.platform, {
       requestId: request.requestId,
-      executionId: execRecord.executionId,
+      executionId: journalExecId,
     });
     if (!claim.claimed) {
       const failResult: ActionResult = {
         success: false,
         message: `Operación ya en curso o pendiente: ${action.name} (${claim.reason || 'claim_exists'})`,
       };
+      if (idempotencyKey !== undefined) {
+        // §6.3/§4: el perdedor escribe aborted (con su fingerprint); no cuenta como intento ejecutado
+        finishKey(
+          idempotencyKey,
+          {
+            fingerprint: claim.fingerprint,
+            actionId,
+            target: request.target,
+            platform: request.platform,
+            executionId: journalExecId,
+            requestId: request.requestId,
+          },
+          'aborted',
+          { reason: claim.reason ?? 'claim_exists' },
+        );
+      }
       this.execStore.fail(execRecord.executionId, failResult);
       if (token) this.authStore.consume(token.tokenId);
       return failResult;
     }
+    hitFaultPoint('after_claim');
 
     // ── 10. Execute via private executor ───────────────
     const executor = this.registry.get(actionId);
@@ -196,17 +306,25 @@ export class ActionGate {
         target: request.target,
         platform: request.platform,
         requestId: request.requestId,
-        executionId: execRecord.executionId,
+        executionId: journalExecId,
         timestamp: new Date().toISOString(),
         pid: process.pid,
         hostname: hostname(),
         status: 'failed',
         message: failResult.message,
       });
+      if (idempotencyKey !== undefined) {
+        finishKey(
+          idempotencyKey,
+          this.finishKeyContext(claim.fingerprint, actionId, request, journalExecId),
+          'failed',
+          { result: { success: false, message: failResult.message } },
+        );
+      }
       if (journalWritten) {
         // Release only our own claim (identity re-checked inside releaseInflight)
         releaseInflight(claim.fingerprint, {
-          executionId: execRecord.executionId,
+          executionId: journalExecId,
           requestId: request.requestId,
           pid: process.pid,
           hostname: hostname(),
@@ -223,6 +341,7 @@ export class ActionGate {
         success: false,
         message: `Error ejecutando ${action.name}: ${error instanceof Error ? error.message : String(error)}`,
       };
+      hitFaultPoint('after_execute');
       this.execStore.fail(execRecord.executionId, result);
       if (token) this.authStore.consume(token.tokenId);
       // Append to journal before releasing claim - DO NOT release if journal write fails
@@ -233,17 +352,30 @@ export class ActionGate {
         target: request.target,
         platform: request.platform,
         requestId: request.requestId,
-        executionId: execRecord.executionId,
+        executionId: journalExecId,
         timestamp: new Date().toISOString(),
         pid: process.pid,
         hostname: hostname(),
         status: 'failed',
         message: result.message,
       });
+      if (idempotencyKey !== undefined) {
+        hitFaultPoint('before_terminal_append');
+        // §6.4: excepción → failed. Si el append falla, NO se libera el claim (§6.5)
+        const persisted = finishKey(
+          idempotencyKey,
+          this.finishKeyContext(claim.fingerprint, actionId, request, journalExecId),
+          'failed',
+          { result: { success: false, message: result.message } },
+        );
+        if (!persisted) {
+          return { ...result, persisted: false };
+        }
+      }
       if (journalWritten) {
         // Release only our own claim (identity re-checked inside releaseInflight)
         releaseInflight(claim.fingerprint, {
-          executionId: execRecord.executionId,
+          executionId: journalExecId,
           requestId: request.requestId,
           pid: process.pid,
           hostname: hostname(),
@@ -253,6 +385,8 @@ export class ActionGate {
       return result;
     }
 
+    hitFaultPoint('after_execute');
+
     // ── 11. Consume token ──────────────────────────────
     if (token) {
       this.authStore.consume(token.tokenId);
@@ -261,7 +395,9 @@ export class ActionGate {
     // ── 12. Record completion ──────────────────────────
     this.execStore.complete(execRecord.executionId, result);
 
+    // ── 13. Journal terminal (Fase 2, §6.4–§6.6) ──────
     // Append to journal before releasing claim - DO NOT release if journal write fails
+    hitFaultPoint('before_terminal_append');
     const journalWritten = appendToJournal({
       type: 'execution',
       fingerprint: claim.fingerprint,
@@ -269,17 +405,46 @@ export class ActionGate {
       target: request.target,
       platform: request.platform,
       requestId: request.requestId,
-      executionId: execRecord.executionId,
+      executionId: journalExecId,
       timestamp: new Date().toISOString(),
       pid: process.pid,
       hostname: hostname(),
       status: result.success ? 'success' : 'failed',
       message: result.message,
     });
+    if (idempotencyKey !== undefined) {
+      // §6.4: retorno → completed con result. Si el append terminal falla:
+      // §6.5 no se libera el claim y el resultado sale con persisted:false.
+      const persisted = finishKey(
+        idempotencyKey,
+        this.finishKeyContext(claim.fingerprint, actionId, request, journalExecId),
+        result.success ? 'completed' : 'failed',
+        { result: { success: result.success, message: result.message } },
+      );
+      if (!persisted) {
+        return { ...result, persisted: false };
+      }
+      // Fase 2 (L2): liberar claim según `persisted` si hay key,
+      // según `journalWritten` (entrada Fase 1) si no hay. Evita que una
+      // entrada Fase 1 fallida retenga la claim aunque la keyed ya esté
+      // completada — el escenario descrito en L2.
+      const claimReleaseCriterion = idempotencyKey !== undefined
+        ? persisted
+        : journalWritten;
+      if (claimReleaseCriterion) {
+        releaseInflight(claim.fingerprint, {
+          executionId: journalExecId,
+          requestId: request.requestId,
+          pid: process.pid,
+          hostname: hostname(),
+        });
+      }
+      return { ...result, persisted: true };
+    }
     if (journalWritten) {
       // Release only our own claim (identity re-checked inside releaseInflight)
       releaseInflight(claim.fingerprint, {
-        executionId: execRecord.executionId,
+        executionId: journalExecId,
         requestId: request.requestId,
         pid: process.pid,
         hostname: hostname(),

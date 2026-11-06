@@ -19,7 +19,7 @@ import {
   toJSON,
 } from './core/presenter.js';
 import { loadState, updateState, ensureBuffyDir } from './state/store.js';
-import { listInflight, resolveClaim, getJournalPath, type JournalResolution } from './core/execution-journal.js';
+import { listInflight, resolveClaim, resolveKey, getJournalPath, type JournalResolution } from './core/execution-journal.js';
 import { stripFlags } from './shared/cli-args.js';
 import { contextEnvInfo, execCtx, listCtxCommands, resolveContextRepo } from './shared/ctx.js';
 import {
@@ -120,12 +120,17 @@ async function main() {
 buffy journal                          Claims inflight (en curso o abandonados)
 buffy journal list [--json]            Igual, explícito
 buffy journal resolve <fingerprint> <executionId> <resolution> <motivo...>
+buffy journal resolve --key <key> <resolution> <motivo...> [--evidence "<texto>"]
 
   resolution: ${RESOLUTIONS.join(' | ')}
 
-  Exige el executionId del claim inspeccionado (validación de identidad) y un
+  Por claim: exige el executionId del claim inspeccionado (validación de identidad) y un
   motivo (registro auditable). No libera si el propietario sigue vivo en este
   host. No hay liberación automática.
+
+  Por key (Fase 2): resuelve la key de idempotencia. Solo actúa si el estado
+  derivado es needs_resolution; con dueño vivo → owner_alive. efecto_ausente_confirmado
+  exige evidence (§8). abandonada_sin_determinar conserva el claim.
 `;
 
     if (!sub || sub === 'list') {
@@ -147,6 +152,49 @@ buffy journal resolve <fingerprint> <executionId> <resolution> <motivo...>
           ? `\nPara resolver uno: buffy journal resolve <fingerprint> <executionId> <resolution> "<motivo>"\n`
           : '',
       );
+      return;
+    }
+
+    if (sub === 'resolve' && args[2] === '--key') {
+      // ── Resolución por key de idempotencia (Fase 2, §8) ──
+      const key = args[3];
+      const resolution = args[4];
+      const rest = args.slice(5);
+      const evIdx = rest.indexOf('--evidence');
+      const evidence = evIdx >= 0 ? (rest[evIdx + 1] ?? '').trim() : '';
+      const motivo = rest
+        .filter((t, i) => t !== '--evidence' && !t.startsWith('--') && (evIdx < 0 || i !== evIdx + 1))
+        .join(' ')
+        .trim();
+      if (!key || !resolution || !motivo) {
+        console.error(journalUsage);
+        process.exit(1);
+      }
+      if (!RESOLUTIONS.includes(resolution as JournalResolution)) {
+        console.error(`Resolución inválida: ${resolution}`);
+        console.error(`Valores admitidos: ${RESOLUTIONS.join(' | ')}`);
+        process.exit(1);
+      }
+      let outcome;
+      try {
+        outcome = resolveKey(key, resolution, { reason: motivo, evidence, resolvedBy: 'human' });
+      } catch (e: any) {
+        console.error(`No se resolvió: ${e?.message ?? e}`);
+        process.exit(1);
+      }
+      if (!outcome.ok) {
+        console.error(outcome.message);
+        process.exit(1);
+      }
+      if (jsonMode) {
+        console.log(toJSON({ resolved: true, key, resolution: outcome.resolution, claimReleased: outcome.claimReleased, journal: getJournalPath() }));
+        return;
+      }
+      console.log(`\n✅ Key resuelta: ${outcome.resolution}`);
+      console.log(`   motivo:      ${motivo}`);
+      if (evidence) console.log(`   evidencia:   ${evidence}`);
+      console.log(`   claim:       ${outcome.claimReleased ? 'liberado' : 'no liberado (se conserva o se limpia con resolve por claim de Fase 1)'}`);
+      console.log(`   registro:    ${getJournalPath()}\n`);
       return;
     }
 
