@@ -2,7 +2,7 @@
 
 ## Estado del repositorio
 - **Rama:** `ejecution-journal-fase2-idempotencia` (local, SIN push — no se pidió)
-- **HEAD:** `8fd394a` docs(notas): quitar atribuciones al operador y fijar el supuesto de D3 (sobre `7c49aa1` revert del `else` y `6f521e1` restauración de `design-v3.md`)
+- **HEAD sustantivo:** `bec70ab` docs(research): evidencia verificada de D3 y matiz real del cache hit. Lo único posterior es el commit que sincroniza este propio archivo (solo `CONTINUE.md`), así que el código y los documentos descritos aquí están en `bec70ab`. Cadena de la ronda: `9ed9526` (HEAD anterior en este archivo), `8fd394a` (notas sin atribuciones ni alucinaciones), `7c49aa1` (revert del `else`), `6f521e1` (restauración de `design-v3.md`). 13 commits sobre la base y 14 archivos tocados hasta `bec70ab`.
 - **Base:** `093c62a` (merge Phase 1) ← commit anterior `39bd834` en origin
 - Working tree limpio tras los commits; diseño v2/v2.bak preservados y commiteados.
 
