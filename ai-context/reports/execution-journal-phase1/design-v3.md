@@ -119,6 +119,11 @@ Los dos últimos puntos producen el mismo estado observable; el test afirma el m
 - Los adapters dependen del entorno (`process.env`); el fingerprint no lo cubre.
 - Reutilización de PID: mitigada por `bootId` + `starttime`; sin `/proc` queda solo PID + hostname.
 
-## 13. Nota operativa
+## 12. Checklist (nada hecho)
 
-Este archivo es un alias de trabajo del diseño canon que vive en `ai-context/reports/execution-journal-phase1/design-v3.md` dentro del tree compartido de la sesión. Su contenido es idéntico al canon para esta rama; si el canon cambia, se sincroniza aquí. No modificar directamente — editar siempre el canon.
+- [ ] Tests de fault injection (primero; deben fallar)
+- [ ] Hook `BUFFY_FAULT_POINT`
+- [ ] `beginKey` / `finishKey` / `lookupKey` / `resolveKey` en `execution-journal.ts`
+- [ ] `opts.idempotencyKey` en `ActionGate.execute()`
+- [ ] CLI `journal resolve --key`
+- [ ] `npx tsc --noEmit` y `npx vitest run` en verde
