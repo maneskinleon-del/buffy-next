@@ -6,7 +6,7 @@
 - **Base de integración:** `093c62a` (merge Phase 1); la rama aportó 14 commits y 14 archivos.
 - **Fase 2 CERRADA:** `ai-context/reports/execution-journal-phase2/closure-report.md`.
 - **Fase 3 abierta sin implementar:** rama `execution-journal-fase3-l3` (un commit de alcance encima de `f97c1f4`), documento `ai-context/reports/execution-journal-phase3/scope-l3.md`.
-- **Publicación:** `origin/master` en `eb000f8`; hay 2 commits locales por encima (cierre de Fase 2 y su checkpoint) sin push.
+- **Publicación:** `origin/master` al día con `master` (incluye el cierre de Fase 2 y este checkpoint). Rama `execution-journal-fase3-l3` publicada en `origin`. Sin deploy.
 - Working tree limpio; diseño v2/v2.bak preservados y commiteados; verificación post-merge: árbol idéntico a la rama (`git diff 2ab502f 2b7b56e` vacío), `tsc` 0 errores, 751/751.
 
 ## Último checkpoint validado
@@ -25,7 +25,7 @@
 
 ## Tareas pendientes
 - [x] Merge de `ejecution-journal-fase2-idempotencia` a `master` (`2b7b56e`, `--no-ff`) — 2026-11-06.
-- [ ] Push de `master` a `origin` (lo decide el usuario; fuera de la autorización recibida).
+- [x] Push de `master` y de la rama `execution-journal-fase3-l3` a `origin` — 2026-11-06.
 - [x] Informe de cierre formal de Fase 2 (`f97c1f4`).
 - [x] Alcance cerrado de Fase 3 / L3 decidido (`dcb235e`, rama `execution-journal-fase3-l3`). Decisiones: lock con `bootId`+`starttime` (opción B) y auditoría antes del `unlink`.
 - [ ] Implementar L3 según `ai-context/reports/execution-journal-phase3/scope-l3.md` (sin empezar).
