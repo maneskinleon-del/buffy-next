@@ -1,10 +1,11 @@
 # CONTINUE - Estado para retomar trabajo
 
 ## Estado del repositorio
-- **Rama:** `ejecution-journal-fase2-idempotencia` (local, SIN push — no se pidió)
-- **HEAD sustantivo:** `bec70ab` docs(research): evidencia verificada de D3 y matiz real del cache hit. Lo único posterior es el commit que sincroniza este propio archivo (solo `CONTINUE.md`), así que el código y los documentos descritos aquí están en `bec70ab`. Cadena de la ronda: `9ed9526` (HEAD anterior en este archivo), `8fd394a` (notas sin atribuciones ni alucinaciones), `7c49aa1` (revert del `else`), `6f521e1` (restauración de `design-v3.md`). 13 commits sobre la base y 14 archivos tocados hasta `bec70ab`.
-- **Base:** `093c62a` (merge Phase 1) ← commit anterior `39bd834` en origin
-- Working tree limpio tras los commits; diseño v2/v2.bak preservados y commiteados.
+- **Rama activa:** `master`
+- **HEAD sustantivo:** `2b7b56e` merge `--no-ff` de `ejecution-journal-fase2-idempotencia` (Fase 2 integrada). Lo único posterior es el commit que sincroniza este propio archivo (solo `CONTINUE.md`).
+- **Base de integración:** `093c62a` (merge Phase 1); la rama aportó 14 commits y 14 archivos.
+- **Sin push y sin deploy** — autorización expresa pendiente del usuario. `origin/master` sigue en `093c62a`.
+- Working tree limpio; diseño v2/v2.bak preservados y commiteados; verificación post-merge: árbol idéntico a la rama (`git diff 2ab502f HEAD` vacío), `tsc` 0 errores, 751/751.
 
 ## Último checkpoint validado
 **Fase 2 — idempotencia at-most-once (diseño v3, 2026-11-05) + ronda de revisión**
@@ -21,7 +22,8 @@
 - **Cierre de revisión (2026-11-06):** `design-v3.md` restaurado verbatim desde `0718c45` (129 líneas, diff vacío; antes estaba borrado y recreado con el §12 reemplazado) · revertido el `else` inalcanzable que `e43ff97` añadió al criterio de liberación de claim · notas sin atribuciones al operador (L4, cabecera) y D3 declara el efecto real en telemetría: `allRecords()` clasifica el registro `failed` como `outcome: 'exception'`, así que el `cached` deja el compuesto en `NOT_VERIFIED`, nunca `OBSERVED_EXECUTED` (evidencia en `ai-context/research/execution-journal-phase2-who-reads-fail.md`). Verificado tras los cambios: `tsc` 0 errores, 751/751.
 
 ## Tareas pendientes
-- [ ] Decidir merge de `ejecution-journal-fase2-idempotencia` a master y push a origin (requiere OK del usuario).
+- [x] Merge de `ejecution-journal-fase2-idempotencia` a `master` (`2b7b56e`, `--no-ff`) — 2026-11-06.
+- [ ] Push de `master` a `origin` (lo decide el usuario; fuera de la autorización recibida).
 - [ ] Fase 3 (deuda explícita): `journal unlock --confirm-dead-pid` para `journal.lock` huérfano (L3 en notas).
 - [ ] Decidir si la misma fingerprint con keys distintas debe excluirse más allá del claim (L1 en notas).
 
