@@ -2,7 +2,7 @@
 
 ## Estado del repositorio
 - **Rama:** `ejecution-journal-fase2-idempotencia` (local, SIN push — no se pidió)
-- **HEAD:** `0718c45` feat(execution-journal): Fase 2 — idempotencia at-most-once (diseño v3 §12) (+ checkpoint docs)
+- **HEAD:** `8fd394a` docs(notas): quitar atribuciones al operador y fijar el supuesto de D3 (sobre `7c49aa1` revert del `else` y `6f521e1` restauración de `design-v3.md`)
 - **Base:** `093c62a` (merge Phase 1) ← commit anterior `39bd834` en origin
 - Working tree limpio tras los commits; diseño v2/v2.bak preservados y commiteados.
 
@@ -18,6 +18,7 @@
 - Verificación final: `npx tsc --noEmit` 0 errores; `npx vitest run` **751/751 pasados (49 archivos)** = 728 previos + 17 Fase 2 + 6 CLI.
 - Bugs corregidos en el loop: lock anidado (deadlock 5 s), separadores de ruta en keys, `ioError` (EISDIR) separado de línea corrupta → `fallo_append_started`, fixture pasa la key vacía tal cual, `freshDir()` por punto en T8, conteos de executor en T7/T9, motivo del CLI sin `--evidence`.
 - Avisos `[buffy:evidence]` de la suite: **preexistentes**, reproducidos en `093c62a` (`No "recordEvidence" export is defined on the "../src/state/store.js" mock`). No afectan el resultado.
+- **Cierre de revisión (2026-11-06):** `design-v3.md` restaurado verbatim desde `0718c45` (129 líneas, diff vacío; antes estaba borrado y recreado con el §12 reemplazado) · revertido el `else` inalcanzable que `e43ff97` añadió al criterio de liberación de claim · notas sin atribuciones al operador (L4, cabecera) y D3 declara explícitamente que `allRecords()` incluye el intento `cached` como fallido en telemetría sin promoverlo a `OBSERVED_EXECUTED`. Verificado tras los cambios: `tsc` 0 errores, 751/751.
 
 ## Tareas pendientes
 - [ ] Decidir merge de `ejecution-journal-fase2-idempotencia` a master y push a origin (requiere OK del usuario).
