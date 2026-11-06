@@ -2,10 +2,12 @@
 
 ## Estado del repositorio
 - **Rama activa:** `master`
-- **HEAD sustantivo:** `2b7b56e` merge `--no-ff` de `ejecution-journal-fase2-idempotencia` (Fase 2 integrada). Lo único posterior es el commit que sincroniza este propio archivo (solo `CONTINUE.md`).
+- **HEAD sustantivo:** `f97c1f4` informe de cierre formal de Fase 2 (sobre `2b7b56e`, el merge `--no-ff`). Sin cambios de código desde el merge.
 - **Base de integración:** `093c62a` (merge Phase 1); la rama aportó 14 commits y 14 archivos.
-- **Sin push y sin deploy** — autorización expresa pendiente del usuario. `origin/master` sigue en `093c62a`.
-- Working tree limpio; diseño v2/v2.bak preservados y commiteados; verificación post-merge: árbol idéntico a la rama (`git diff 2ab502f HEAD` vacío), `tsc` 0 errores, 751/751.
+- **Fase 2 CERRADA:** `ai-context/reports/execution-journal-phase2/closure-report.md`.
+- **Fase 3 abierta sin implementar:** rama `execution-journal-fase3-l3` (un commit de alcance encima de `f97c1f4`), documento `ai-context/reports/execution-journal-phase3/scope-l3.md`.
+- **Publicación:** `origin/master` en `eb000f8`; hay 2 commits locales por encima (cierre de Fase 2 y su checkpoint) sin push.
+- Working tree limpio; diseño v2/v2.bak preservados y commiteados; verificación post-merge: árbol idéntico a la rama (`git diff 2ab502f 2b7b56e` vacío), `tsc` 0 errores, 751/751.
 
 ## Último checkpoint validado
 **Fase 2 — idempotencia at-most-once (diseño v3, 2026-11-05) + ronda de revisión**
@@ -24,7 +26,9 @@
 ## Tareas pendientes
 - [x] Merge de `ejecution-journal-fase2-idempotencia` a `master` (`2b7b56e`, `--no-ff`) — 2026-11-06.
 - [ ] Push de `master` a `origin` (lo decide el usuario; fuera de la autorización recibida).
-- [ ] Fase 3 (deuda explícita): `journal unlock --confirm-dead-pid` para `journal.lock` huérfano (L3 en notas).
+- [x] Informe de cierre formal de Fase 2 (`f97c1f4`).
+- [x] Alcance cerrado de Fase 3 / L3 decidido (`dcb235e`, rama `execution-journal-fase3-l3`). Decisiones: lock con `bootId`+`starttime` (opción B) y auditoría antes del `unlink`.
+- [ ] Implementar L3 según `ai-context/reports/execution-journal-phase3/scope-l3.md` (sin empezar).
 - [ ] Decidir si la misma fingerprint con keys distintas debe excluirse más allá del claim (L1 en notas).
 
 ## Riesgos conocidos
